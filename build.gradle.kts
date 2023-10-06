@@ -10,7 +10,7 @@ val ossrhPassword: String by project
 
 subprojects {
     group = "io.github.afezeria"
-    version = "1.1.0"
+    version = "1.2.0"
 
     apply {
         plugin("kotlin")

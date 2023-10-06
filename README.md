@@ -12,8 +12,8 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.0.0")
-    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.0.0")
+    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.2.0")
+    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.2.0")
 }
 
 ```
@@ -66,11 +66,13 @@ interface PersonMapper : BaseMapper<Person>
 ```kotlin
 fun PersonMapper.query(): PersonMapperQueryWrapper
 fun PersonMapper.queryList(fn: PersonMapperQueryWrapper.() -> Unit): List<Person>
+fun <P : IPage<Person>> PersonMapper.queryPage(page: P, fn: PersonMapperQueryWrapper.() -> Unit): P
 fun PersonMapper.queryOne(fn: PersonMapperQueryWrapper.() -> Unit): Person?
 fun PersonMapper.queryCount(fn: PersonMapperQueryWrapper.() -> Unit): Long
 fun PersonMapper.delete(): PersonMapperQueryWrapper
 fun PersonMapper.delete(fn: PersonMapperQueryWrapper.() -> Unit): Int
 fun PersonMapper.update(): PersonMapperUpdateWrapper
+fun PersonMapper.update(fn: PersonMapperUpdateWrapper.() -> Unit): Int
 fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateWrapper.() -> Unit): Int
 
 ```
