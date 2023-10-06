@@ -3,6 +3,7 @@ package io.github.afezeria.mybatispluswrapperext.processor
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.core.mapper.BaseMapper
+import com.baomidou.mybatisplus.core.metadata.IPage
 import com.google.devtools.ksp.*
 import com.google.devtools.ksp.processing.*
 import com.google.devtools.ksp.symbol.KSAnnotated
@@ -152,6 +153,24 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 )
                 .build()
         )
+
+        val pageType = TypeVariableName("P", IPage::class.asClassName().parameterizedBy(entityClassName))
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("queryPage")
+                .addTypeVariable(pageType)
+                .receiver(mapperClassName)
+                .returns(pageType)
+                .addParameter("page", pageType)
+                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    return %T(this).apply {
+                        fn(this)
+                    }.toPage(page)
+                """.trimIndent(), queryExtensionClassName
+                )
+                .build()
+        )
         fileSpecBuilder.addFunction(
             FunSpec.builder("queryOne")
                 .receiver(mapperClassName)
@@ -210,6 +229,20 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .returns(updateExtensionClassName)
                 .addStatement("return %T(this)", updateExtensionClassName)
                 .build(),
+        )
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("update")
+                .receiver(mapperClassName)
+                .returns(INT_CLASS_NAME)
+                .addParameter("fn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    return %T(this).apply {
+                        fn(this)
+                    }.update()
+                """.trimIndent(), updateExtensionClassName
+                )
+                .build()
         )
         entityClass.getAllProperties()
             .firstOrNull {
@@ -366,14 +399,4 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         const val EXTENSION_CONSTRUCTOR_PARAMETER_NAME = "mapper"
 
     }
-}
-
-fun main() {
-    println(
-        """
-                        return %T(this).apply {
-                            fn(this)
-                        }.toCount()
-                    """.trimIndent()
-    )
 }

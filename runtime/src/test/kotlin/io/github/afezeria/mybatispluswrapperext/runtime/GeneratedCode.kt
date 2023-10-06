@@ -1,6 +1,7 @@
 package io.github.afezeria.mybatispluswrapperext.runtime
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
+import com.baomidou.mybatisplus.core.metadata.IPage
 import com.baomidou.mybatisplus.core.toolkit.Wrappers
 import java.lang.reflect.Proxy
 
@@ -40,6 +41,15 @@ fun PersonMapper.queryList(fn: PersonMapperQueryWrapper.() -> Unit): List<Person
     }.toList()
 }
 
+fun <P : IPage<Person>> PersonMapper.queryPage(
+    page: P,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): P {
+    return PersonMapperQueryWrapper(this).apply {
+        fn(this)
+    }.toPage(page)
+}
+
 fun PersonMapper.queryOne(fn: PersonMapperQueryWrapper.() -> Unit): Person? {
     return PersonMapperQueryWrapper(this).apply {
         fn(this)
@@ -75,6 +85,12 @@ class PersonMapperUpdateWrapper(
 
 fun PersonMapper.update(): PersonMapperUpdateWrapper {
     return PersonMapperUpdateWrapper(this)
+}
+
+fun PersonMapper.update(fn: PersonMapperUpdateWrapper.() -> Unit): Int {
+    return PersonMapperUpdateWrapper(this).apply {
+        fn(this)
+    }.update()
 }
 
 fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateWrapper.() -> Unit): Int {

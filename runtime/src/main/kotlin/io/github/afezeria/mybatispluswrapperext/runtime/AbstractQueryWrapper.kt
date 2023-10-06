@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.AbstractWrapper
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper
 import com.baomidou.mybatisplus.core.mapper.BaseMapper
+import com.baomidou.mybatisplus.core.metadata.IPage
 import com.baomidou.mybatisplus.core.toolkit.Wrappers
 
 /**
@@ -80,6 +81,10 @@ abstract class AbstractQueryWrapper<
 
     fun toList(): List<T> {
         return mapper.selectList(wrapper)
+    }
+
+    fun <P : IPage<T>> toPage(page: P): P {
+        return mapper.selectPage(page, wrapper)
     }
 
     fun toOne(): T? {
