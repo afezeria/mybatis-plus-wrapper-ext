@@ -1,6 +1,6 @@
 package io.github.afezeria.mybatispluswrapperext.runtime
 
-open class FieldDefinition<ME : AbstractMapperExtension<*, *, *, *>, T>(
+open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
     protected val name: String,
     protected val owner: ME,
 ) {
@@ -110,6 +110,37 @@ open class FieldDefinition<ME : AbstractMapperExtension<*, *, *, *>, T>(
     fun `in`(condition: Boolean, values: () -> Collection<T>): ME {
         if (condition) {
             owner.wrapper.`in`(name, values())
+        }
+        return owner
+    }
+
+    fun notIn(values: Collection<T>): ME {
+        owner.wrapper.notIn(name, values)
+        return owner
+    }
+
+    fun notIn(vararg values: T): ME {
+        owner.wrapper.notIn(name, values)
+        return owner
+    }
+
+    fun notIn(condition: Boolean, values: Collection<T>): ME {
+        if (condition) {
+            owner.wrapper.notIn(name, values)
+        }
+        return owner
+    }
+
+    fun notIn(condition: Boolean, vararg values: T): ME {
+        if (condition) {
+            owner.wrapper.notIn(name, values)
+        }
+        return owner
+    }
+
+    fun notIn(condition: Boolean, values: () -> Collection<T>): ME {
+        if (condition) {
+            owner.wrapper.notIn(name, values())
         }
         return owner
     }
@@ -330,7 +361,7 @@ open class FieldDefinition<ME : AbstractMapperExtension<*, *, *, *>, T>(
     }
 }
 
-class UpdateFieldDefinition<ME : AbstractMapperUpdateExtension<*, *, *>, T>(
+class UpdateFieldDefinition<ME : AbstractUpdateWrapper<*, *, *>, T>(
     name: String,
     owner: ME,
 ) : FieldDefinition<ME, T>(name, owner) {

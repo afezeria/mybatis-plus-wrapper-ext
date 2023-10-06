@@ -15,70 +15,70 @@ val mapper = Proxy.newProxyInstance(
     null
 } as PersonMapper
 
-class PersonMapperQueryExtension(
+class PersonMapperQueryWrapper(
     mapper: PersonMapper,
-) : AbstractMapperQueryExtension<PersonMapperQueryExtension, PersonMapper, Person>(mapper) {
+) : AbstractQueryWrapper<PersonMapperQueryWrapper, PersonMapper, Person>(mapper) {
 
-    val ID = FieldDefinition<PersonMapperQueryExtension, Int>("id", this)
+    val ID = FieldDefinition<PersonMapperQueryWrapper, Int>("id", this)
 
-    val NAME: FieldDefinition<PersonMapperQueryExtension, String>
+    val NAME: FieldDefinition<PersonMapperQueryWrapper, String>
         get() = FieldDefinition("name", this)
 
-    val AGE: FieldDefinition<PersonMapperQueryExtension, Int>
+    val AGE: FieldDefinition<PersonMapperQueryWrapper, Int>
         get() = FieldDefinition("age", this)
 }
 
 
-fun PersonMapper.query(): PersonMapperQueryExtension {
-    return PersonMapperQueryExtension(this)
+fun PersonMapper.query(): PersonMapperQueryWrapper {
+    return PersonMapperQueryWrapper(this)
 }
 
 
-fun PersonMapper.queryList(fn: PersonMapperQueryExtension.() -> Unit): List<Person> {
-    return PersonMapperQueryExtension(this).apply {
+fun PersonMapper.queryList(fn: PersonMapperQueryWrapper.() -> Unit): List<Person> {
+    return PersonMapperQueryWrapper(this).apply {
         fn(this)
     }.toList()
 }
 
-fun PersonMapper.queryOne(fn: PersonMapperQueryExtension.() -> Unit): Person? {
-    return PersonMapperQueryExtension(this).apply {
+fun PersonMapper.queryOne(fn: PersonMapperQueryWrapper.() -> Unit): Person? {
+    return PersonMapperQueryWrapper(this).apply {
         fn(this)
     }.toOne()
 }
 
-fun PersonMapper.queryCount(fn: PersonMapperQueryExtension.() -> Unit): Long {
-    return PersonMapperQueryExtension(this).apply {
+fun PersonMapper.queryCount(fn: PersonMapperQueryWrapper.() -> Unit): Long {
+    return PersonMapperQueryWrapper(this).apply {
         fn(this)
     }.toCount()
 }
 
-fun PersonMapper.delete(): PersonMapperQueryExtension {
-    return PersonMapperQueryExtension(this)
+fun PersonMapper.delete(): PersonMapperQueryWrapper {
+    return PersonMapperQueryWrapper(this)
 }
 
-fun PersonMapper.delete(fn: PersonMapperQueryExtension.() -> Unit): Int {
-    return PersonMapperQueryExtension(this).apply {
+fun PersonMapper.delete(fn: PersonMapperQueryWrapper.() -> Unit): Int {
+    return PersonMapperQueryWrapper(this).apply {
         fn(this)
     }.delete()
 }
 
-class PersonMapperUpdateExtension(
+class PersonMapperUpdateWrapper(
     mapper: PersonMapper,
-) : AbstractMapperUpdateExtension<PersonMapperUpdateExtension, PersonMapper, Person>(mapper) {
+) : AbstractUpdateWrapper<PersonMapperUpdateWrapper, PersonMapper, Person>(mapper) {
 
-    val ID = UpdateFieldDefinition<PersonMapperUpdateExtension, Int>("id", this)
+    val ID = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int>("id", this)
 
-    val NAME = UpdateFieldDefinition<PersonMapperUpdateExtension, String>("name", this)
+    val NAME = UpdateFieldDefinition<PersonMapperUpdateWrapper, String>("name", this)
 
-    val AGE = UpdateFieldDefinition<PersonMapperUpdateExtension, Int>("age", this)
+    val AGE = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int>("age", this)
 }
 
-fun PersonMapper.update(): PersonMapperUpdateExtension {
-    return PersonMapperUpdateExtension(this)
+fun PersonMapper.update(): PersonMapperUpdateWrapper {
+    return PersonMapperUpdateWrapper(this)
 }
 
-fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateExtension.() -> Unit): Int {
-    val wrapper = PersonMapperUpdateExtension(this).apply(fn)
+fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateWrapper.() -> Unit): Int {
+    val wrapper = PersonMapperUpdateWrapper(this).apply(fn)
         .ID.eq(id)
         .wrapper
     return this.update(null, wrapper)
@@ -133,7 +133,7 @@ fun generateAssert() {
         }
 }
 
-fun extSql(fn: PersonMapperQueryExtension.() -> Unit): String {
+fun extSql(fn: PersonMapperQueryWrapper.() -> Unit): String {
     return mapper.query().apply {
         fn(this)
     }.wrapper.customSqlSegment.also {

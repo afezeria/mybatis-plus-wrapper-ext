@@ -13,8 +13,8 @@ import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.writeTo
-import io.github.afezeria.mybatispluswrapperext.runtime.AbstractMapperQueryExtension
-import io.github.afezeria.mybatispluswrapperext.runtime.AbstractMapperUpdateExtension
+import io.github.afezeria.mybatispluswrapperext.runtime.AbstractQueryWrapper
+import io.github.afezeria.mybatispluswrapperext.runtime.AbstractUpdateWrapper
 import io.github.afezeria.mybatispluswrapperext.runtime.FieldDefinition
 import io.github.afezeria.mybatispluswrapperext.runtime.UpdateFieldDefinition
 
@@ -100,9 +100,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         val fileSpecBuilder =
             FileSpec.builder(mapper.packageName.asString(), mapper.simpleName.asString() + "Extensions")
         val queryExtensionClassName =
-            addMapperExtensionClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, false)
+            addMapperWrapperClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, false)
         val updateExtensionClassName =
-            addMapperExtensionClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, true)
+            addMapperWrapperClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, true)
 
         addExtensionMethod(
             fileSpecBuilder,
@@ -241,7 +241,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
     }
 
 
-    private fun addMapperExtensionClass(
+    private fun addMapperWrapperClass(
         fileSpecBuilder: FileSpec.Builder,
         mapperClassName: ClassName,
         entityClassName: ClassName,
@@ -254,16 +254,16 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         if (isUpdateExtension) {
             extensionClassName = ClassName(
                 mapperClassName.packageName,
-                "${mapperClassName.simpleName}UpdateExtension"
+                "${mapperClassName.simpleName}UpdateWrapper"
             )
-            abstractMapperExtension = AbstractMapperUpdateExtension::class.asClassName()
+            abstractMapperExtension = AbstractUpdateWrapper::class.asClassName()
             fieldDefinitionClassName = UpdateFieldDefinition::class.asClassName()
         } else {
             extensionClassName = ClassName(
                 mapperClassName.packageName,
-                "${mapperClassName.simpleName}QueryExtension"
+                "${mapperClassName.simpleName}QueryWrapper"
             )
-            abstractMapperExtension = AbstractMapperQueryExtension::class.asClassName()
+            abstractMapperExtension = AbstractQueryWrapper::class.asClassName()
             fieldDefinitionClassName = FieldDefinition::class.asClassName()
         }
 

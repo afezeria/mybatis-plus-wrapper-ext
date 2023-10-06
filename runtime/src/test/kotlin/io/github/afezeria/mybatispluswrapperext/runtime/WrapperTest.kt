@@ -44,6 +44,38 @@ class ExtensionTest : StringSpec({
                 `in`(Person::id.name, 1)
             }
         }
+        extSql { ID.notIn(1) } shouldBeEqual oriSql { notIn(Person::id.name, 1) }
+        extSql { ID.notIn(true, 1) } shouldBeEqual oriSql {
+            if (true) {
+                notIn(Person::id.name, 1)
+            }
+        }
+        extSql { ID.notIn(false, 1) } shouldBeEqual oriSql {
+            if (false) {
+                notIn(Person::id.name, 1)
+            }
+        }
+        extSql { ID.notIn(1) } shouldBeEqual oriSql { notIn(Person::id.name, 1) }
+        extSql { ID.notIn(true, 1) } shouldBeEqual oriSql {
+            if (true) {
+                notIn(Person::id.name, 1)
+            }
+        }
+        extSql { ID.notIn(false, 1) } shouldBeEqual oriSql {
+            if (false) {
+                notIn(Person::id.name, 1)
+            }
+        }
+        extSql { ID.notIn(true) { listOf(1) } } shouldBeEqual oriSql {
+            if (true) {
+                notIn(Person::id.name, 1)
+            }
+        }
+        extSql { ID.notIn(false) { listOf(1) } } shouldBeEqual oriSql {
+            if (false) {
+                notIn(Person::id.name, 1)
+            }
+        }
         extSql { ID.le(true) { 1 } } shouldBeEqual oriSql {
             if (true) {
                 le(Person::id.name, 1)

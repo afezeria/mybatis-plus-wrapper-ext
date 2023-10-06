@@ -10,8 +10,8 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers
  *
  * @author afezeria
  */
-abstract class AbstractMapperExtension<
-        S : AbstractMapperExtension<S, M, AW, T>,
+abstract class AbstractWrapperWrapper<
+        S : AbstractWrapperWrapper<S, M, AW, T>,
         M : BaseMapper<T>,
         AW : AbstractWrapper<T, String, AW>,
         T>(
@@ -20,7 +20,6 @@ abstract class AbstractMapperExtension<
 ) {
     private val stack = mutableListOf(wrapper)
     val wrapper get() = stack.last()
-    val constructor = this::class.java.constructors.first()
 
     @Suppress("UNCHECKED_CAST")
     private val self: S = this as S
@@ -72,12 +71,12 @@ abstract class AbstractMapperExtension<
 
 }
 
-abstract class AbstractMapperQueryExtension<
-        S : AbstractMapperQueryExtension<S, M, T>,
+abstract class AbstractQueryWrapper<
+        S : AbstractQueryWrapper<S, M, T>,
         M : BaseMapper<T>,
         T>(
     mapper: M,
-) : AbstractMapperExtension<S, M, QueryWrapper<T>, T>(mapper, Wrappers.query()) {
+) : AbstractWrapperWrapper<S, M, QueryWrapper<T>, T>(mapper, Wrappers.query()) {
 
     fun toList(): List<T> {
         return mapper.selectList(wrapper)
@@ -97,12 +96,12 @@ abstract class AbstractMapperQueryExtension<
 
 }
 
-abstract class AbstractMapperUpdateExtension<
-        S : AbstractMapperUpdateExtension<S, M, T>,
+abstract class AbstractUpdateWrapper<
+        S : AbstractUpdateWrapper<S, M, T>,
         M : BaseMapper<T>,
         T>(
     mapper: M,
-) : AbstractMapperExtension<S, M, UpdateWrapper<T>, T>(mapper, Wrappers.update()) {
+) : AbstractWrapperWrapper<S, M, UpdateWrapper<T>, T>(mapper, Wrappers.update()) {
 
     fun update(): Int {
         return mapper.update(null, wrapper)

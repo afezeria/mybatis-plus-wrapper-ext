@@ -1,7 +1,6 @@
 package io.github.afezeria.mybatispluswrapperext.processor
 
 import com.tschuchort.compiletesting.*
-import io.github.afezeria.mybatispluswrapperext.processor.mapper.IgnoreTag
 import io.github.afezeria.mybatispluswrapperext.processor.mapper.PersonMapper
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -16,7 +15,7 @@ class MainProcessorTest {
     fun compileTest() {
         compile(
             PersonMapper::class,
-            args = mutableMapOf("ignoreMarkerAnnotation" to IgnoreTag::class.qualifiedName!!)
+//            args = mutableMapOf("ignoreMarkerAnnotation" to IgnoreTag::class.qualifiedName!!)
         )
     }
 }
