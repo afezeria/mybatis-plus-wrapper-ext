@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 plugins {
     kotlin("jvm") version "1.9.10" apply false
+    id("org.jetbrains.kotlinx.kover") version "0.7.3" apply false
 }
 
 val ossrhUsername: String by project
@@ -15,6 +16,7 @@ subprojects {
         plugin("kotlin")
         plugin("maven-publish")
         plugin("signing")
+        plugin("org.jetbrains.kotlinx.kover")
     }
 
     repositories {
