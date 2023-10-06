@@ -85,8 +85,13 @@ mapper.query()
     .NAME.like("a")
     .toList()
 
-//等价于：mapper.selectList(Wrappers.query<Person?>().gt("age", "a"))
+//等价于：mapper.selectList(Wrappers.query<Person?>().gt("age", 1))
 mapper.queryList {
+    AGE.gt(1)
+}
+
+//等价于：mapper.selectPage(Page(1, 2), Wrappers.query<Person?>().gt("age", 1))
+mapper.queryPage(Page(1, 2)) {
     AGE.gt(1)
 }
 
@@ -115,6 +120,12 @@ mapper.update()
     .NAME.set("abc")
     .AGE.eq(1)
     .update()
+
+//等价于：mapper.update(null, Wrappers.update<Person?>().set("name", "abc").eq("age", 1))
+mapper.update {
+    NAME.set("abc")
+    AGE.eq(1)
+}
 
 //等价于：mapper.update(null, Wrappers.update<Person?>().set("name", "abc").eq("id", 1))
 mapper.updateById(1) {
@@ -146,7 +157,7 @@ fun eq(condition: Boolean, value: T): ME
 fun eq(condition: Boolean, value: () -> T): ME
 ```
 
-## 疑问
+## Q&A
 
 ### 为什么需要指定属性名和字段名的转换规则？
 
