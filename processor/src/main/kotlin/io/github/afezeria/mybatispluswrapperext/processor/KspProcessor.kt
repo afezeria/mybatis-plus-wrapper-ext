@@ -129,6 +129,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         entityClass: KSClassDeclaration,
     ) {
 
+        //query==========
         fileSpecBuilder.addFunction(
             FunSpec.builder("query")
                 .receiver(mapperClassName)
@@ -168,7 +169,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         fileSpecBuilder.addFunction(
             FunSpec.builder("queryCount")
                 .receiver(mapperClassName)
-                .returns(Long::class.asClassName())
+                .returns(LONG_CLASS_NAME)
                 .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
@@ -179,7 +180,30 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 )
                 .build()
         )
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("delete")
+                .receiver(mapperClassName)
+                .returns(queryExtensionClassName)
+                .addStatement("return %T(this)", queryExtensionClassName)
+                .build(),
+        )
 
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("delete")
+                .receiver(mapperClassName)
+                .returns(INT_CLASS_NAME)
+                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    return %T(this).apply {
+                        fn(this)
+                    }.delete()
+                """.trimIndent(), queryExtensionClassName
+                )
+                .build()
+        )
+
+        //update==========
         fileSpecBuilder.addFunction(
             FunSpec.builder("update")
                 .receiver(mapperClassName)
@@ -197,7 +221,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 fileSpecBuilder.addFunction(
                     FunSpec.builder("updateById")
                         .receiver(mapperClassName)
-                        .returns(Int::class.asClassName())
+                        .returns(INT_CLASS_NAME)
                         .addParameter(idSimpleName, idProp.type.resolve().makeNotNullable().toClassName())
                         .addParameter("fn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                         .addCode(
@@ -337,6 +361,8 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
 
     companion object {
         val UNIT_CLASS_NAME = Unit::class.asClassName()
+        val INT_CLASS_NAME = Int::class.asClassName()
+        val LONG_CLASS_NAME = Long::class.asClassName()
         const val EXTENSION_CONSTRUCTOR_PARAMETER_NAME = "mapper"
 
     }

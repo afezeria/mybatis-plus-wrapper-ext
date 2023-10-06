@@ -91,6 +91,10 @@ abstract class AbstractMapperQueryExtension<
         return mapper.selectCount(wrapper)
     }
 
+    fun delete(): Int {
+        return mapper.delete(wrapper)
+    }
+
 }
 
 abstract class AbstractMapperUpdateExtension<

@@ -52,6 +52,16 @@ fun PersonMapper.queryCount(fn: PersonMapperQueryExtension.() -> Unit): Long {
     }.toCount()
 }
 
+fun PersonMapper.delete(): PersonMapperQueryExtension {
+    return PersonMapperQueryExtension(this)
+}
+
+fun PersonMapper.delete(fn: PersonMapperQueryExtension.() -> Unit): Int {
+    return PersonMapperQueryExtension(this).apply {
+        fn(this)
+    }.delete()
+}
+
 class PersonMapperUpdateExtension(
     mapper: PersonMapper,
 ) : AbstractMapperUpdateExtension<PersonMapperUpdateExtension, PersonMapper, Person>(mapper) {
@@ -76,6 +86,10 @@ fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateExtension.() -> Unit)
 
 fun main() {
     generateAssert()
+    mapper.delete {
+        ID.eq(1)
+
+    }
 //    println(
 //        mapper.update()
 //            .NAME.set("abc")
