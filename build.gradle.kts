@@ -82,7 +82,7 @@ subprojects{
 
                     pom {
                         name.set("${project.group}:${project.name}")
-                        description.set("An extension for the wrapper API of Mybatis-Plus written in Kotlin.")
+                        description.set("An extension library for the wrapper API of Mybatis-Plus written in Kotlin.")
                         url.set("https://github.com/afezeria/mybatis-plus-wrapper-ext")
                         licenses {
                             license {
