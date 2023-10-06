@@ -7,7 +7,7 @@ plugins {
 val ossrhUsername: String by project
 val ossrhPassword: String by project
 
-subprojects{
+subprojects {
     group = "io.github.afezeria"
     version = "1.0.0"
 
@@ -37,7 +37,7 @@ subprojects{
         testImplementation(kotlin("test"))
     }
 
-    tasks.withType<Test>{
+    tasks.withType<Test> {
         useJUnitPlatform()
     }
 
@@ -48,11 +48,16 @@ subprojects{
             archiveClassifier.set("sources")
             from(project.the<SourceSetContainer>()["main"].allSource)
         }
-        tasks.withType<Jar>{
-            archiveBaseName= rootProject.name + "-" + project.name
+        val javadocJar by tasks.creating(Jar::class) {
+            archiveClassifier.set("javadoc")
         }
+        tasks.withType<Jar> {
+            archiveBaseName = rootProject.name + "-" + project.name
+        }
+
         artifacts {
             add("archives", sourcesJar)
+            add("archives", javadocJar)
         }
 
         configure<PublishingExtension> {
@@ -75,6 +80,7 @@ subprojects{
                 register<MavenPublication>("mavenJava") {
                     from(components["java"])
                     artifact(sourcesJar)
+                    artifact(javadocJar)
 
                     groupId = project.group.toString()
                     artifactId = rootProject.name + "-" + project.name
@@ -105,6 +111,10 @@ subprojects{
                     }
                 }
             }
+        }
+
+        configure<SigningExtension> {
+            sign(the<PublishingExtension>().publications["mavenJava"])
         }
     }
 }
