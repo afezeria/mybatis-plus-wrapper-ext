@@ -89,7 +89,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
     }
 
     fun `in`(vararg values: T): ME {
-        owner.wrapper.`in`(name, values)
+        owner.wrapper.`in`(name, *values)
         return owner
     }
 
@@ -102,7 +102,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
 
     fun `in`(condition: Boolean, vararg values: T): ME {
         if (condition) {
-            owner.wrapper.`in`(name, values)
+            owner.wrapper.`in`(name, *values)
         }
         return owner
     }
@@ -120,7 +120,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
     }
 
     fun notIn(vararg values: T): ME {
-        owner.wrapper.notIn(name, values)
+        owner.wrapper.notIn(name, *values)
         return owner
     }
 
@@ -133,7 +133,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
 
     fun notIn(condition: Boolean, vararg values: T): ME {
         if (condition) {
-            owner.wrapper.notIn(name, values)
+            owner.wrapper.notIn(name, *values)
         }
         return owner
     }
