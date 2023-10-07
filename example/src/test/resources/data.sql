@@ -3,6 +3,7 @@ create table if not exists person
     id          int primary key,
     name        varchar(20),
     age         int,
+    imgs binary,
     create_time datetime default current_timestamp(),
     update_time datetime default current_timestamp() on update current_timestamp()
 );

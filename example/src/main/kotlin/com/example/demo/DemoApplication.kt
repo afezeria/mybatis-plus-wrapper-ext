@@ -36,6 +36,7 @@ class Person {
 
     var name: String? = null
     var age: Int? = null
+    val imgs: Array<Byte>? = null
     var createTime: LocalDateTime? = null
     var updateTime: LocalDateTime? = null
     override fun toString(): String {

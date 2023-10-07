@@ -13,6 +13,7 @@ import com.google.devtools.ksp.symbol.Variance
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.toClassName
+import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
 import io.github.afezeria.mybatispluswrapperext.runtime.AbstractQueryWrapper
 import io.github.afezeria.mybatispluswrapperext.runtime.AbstractUpdateWrapper
@@ -348,7 +349,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                     NamingConvention.CONSTANT_CASE.convert(property.simpleName.asString()),
                     fieldDefinitionClassName.parameterizedBy(
                         extensionClassName,
-                        property.type.resolve().toClassName(),
+                        property.type.resolve().makeNotNullable().toTypeName(),
                     )
                 ).initializer(
                     "%T(%S, this)",
