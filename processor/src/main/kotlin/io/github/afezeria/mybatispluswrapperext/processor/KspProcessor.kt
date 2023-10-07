@@ -135,7 +135,12 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             FunSpec.builder("query")
                 .receiver(mapperClassName)
                 .returns(queryExtensionClassName)
-                .addStatement("return %T(this)", queryExtensionClassName)
+                .addCode(
+                    """
+                    val w = %T(this)
+                    return w
+                """.trimIndent(), queryExtensionClassName
+                )
                 .build(),
         )
 
@@ -146,9 +151,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    return %T(this).apply {
-                        fn(this)
-                    }.toList()
+                    val w = %T(this)
+                    fn(w)
+                    return w.toList()
                 """.trimIndent(), queryExtensionClassName
                 )
                 .build()
@@ -164,9 +169,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    return %T(this).apply {
-                        fn(this)
-                    }.toPage(page)
+                    val w = %T(this)
+                    fn(w)
+                    return w.toPage(page)
                 """.trimIndent(), queryExtensionClassName
                 )
                 .build()
@@ -178,9 +183,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    return %T(this).apply {
-                        fn(this)
-                    }.toOne()
+                    val w = %T(this)
+                    fn(w)
+                    return w.toOne()
                 """.trimIndent(), queryExtensionClassName
                 )
                 .build()
@@ -192,9 +197,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    return %T(this).apply {
-                        fn(this)
-                    }.toCount()
+                    val w = %T(this)
+                    fn(w)
+                    return w.toCount()
                 """.trimIndent(), queryExtensionClassName
                 )
                 .build()
@@ -203,7 +208,12 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             FunSpec.builder("delete")
                 .receiver(mapperClassName)
                 .returns(queryExtensionClassName)
-                .addStatement("return %T(this)", queryExtensionClassName)
+                .addCode(
+                    """
+                    val w = %T(this)
+                    return w
+                """.trimIndent(), queryExtensionClassName
+                )
                 .build(),
         )
 
@@ -214,9 +224,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    return %T(this).apply {
-                        fn(this)
-                    }.delete()
+                    val w = %T(this)
+                    fn(w)
+                    return w.delete()
                 """.trimIndent(), queryExtensionClassName
                 )
                 .build()
@@ -227,7 +237,12 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             FunSpec.builder("update")
                 .receiver(mapperClassName)
                 .returns(updateExtensionClassName)
-                .addStatement("return %T(this)", updateExtensionClassName)
+                .addCode(
+                    """
+                    val w = %T(this)
+                    return w
+                """.trimIndent(), updateExtensionClassName
+                )
                 .build(),
         )
         fileSpecBuilder.addFunction(
@@ -237,9 +252,9 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter("fn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    return %T(this).apply {
-                        fn(this)
-                    }.update()
+                    val w = %T(this)
+                    fn(w)
+                    return w.update()
                 """.trimIndent(), updateExtensionClassName
                 )
                 .build()
