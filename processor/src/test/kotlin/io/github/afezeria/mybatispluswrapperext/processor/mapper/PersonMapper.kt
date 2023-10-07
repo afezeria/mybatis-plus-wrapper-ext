@@ -10,12 +10,13 @@ import com.baomidou.mybatisplus.annotation.TableId
 import com.baomidou.mybatisplus.annotation.TableName
 import java.time.LocalDateTime
 
+const val NAME = "Name"
 @TableName("person")
 class Person {
     @TableId("id", type = IdType.AUTO)
     var id: Int? = null
 
-    @TableField(value = "name")
+    @TableField(value = NAME)
     var name: String? = null
     val age: Int? = null
 

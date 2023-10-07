@@ -31,11 +31,9 @@ subprojects {
         val implementation by configurations
         val testImplementation by configurations
         implementation(kotlin("stdlib"))
-        implementation("com.baomidou:mybatis-plus-core:3.5.3.2")
 
         val kotestVersion = "5.7.2"
         testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
-        testImplementation("io.kotest:kotest-property:$kotestVersion")
         testImplementation(kotlin("test"))
     }
 
@@ -45,6 +43,14 @@ subprojects {
 
 
     if (project.name != "example") {
+
+        dependencies {
+            val compileOnly by configurations
+            val testImplementation by configurations
+
+            compileOnly("com.baomidou:mybatis-plus-core:3.5.3.2")
+            testImplementation("com.baomidou:mybatis-plus-core:3.5.3.2")
+        }
 
         val sourcesJar by tasks.creating(Jar::class) {
             archiveClassifier.set("sources")

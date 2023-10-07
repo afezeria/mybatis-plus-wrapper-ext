@@ -1,15 +1,10 @@
 package io.github.afezeria.mybatispluswrapperext.processor
 
-import com.baomidou.mybatisplus.annotation.TableField
-import com.baomidou.mybatisplus.annotation.TableId
-import com.baomidou.mybatisplus.core.mapper.BaseMapper
-import com.baomidou.mybatisplus.core.metadata.IPage
-import com.google.devtools.ksp.*
+import com.google.devtools.ksp.KspExperimental
+import com.google.devtools.ksp.getClassDeclarationByName
+import com.google.devtools.ksp.isAbstract
 import com.google.devtools.ksp.processing.*
-import com.google.devtools.ksp.symbol.KSAnnotated
-import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSType
-import com.google.devtools.ksp.symbol.Variance
+import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.toClassName
@@ -53,7 +48,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
 
     fun init(resolver: Resolver) {
         this.resolver = resolver
-        BASE_MAPPER_CLASS = resolver.getClassDeclarationByName(BaseMapper::class.qualifiedName!!)!!
+        BASE_MAPPER_CLASS = resolver.getClassDeclarationByName(BASE_MAPPER_CLASS_NAME.canonicalName)!!
         BASE_MAPPER_TYPE = BASE_MAPPER_CLASS.asStarProjectedType()
     }
 
@@ -160,7 +155,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .build()
         )
 
-        val pageType = TypeVariableName("P", IPage::class.asClassName().parameterizedBy(entityClassName))
+        val pageType = TypeVariableName("P", I_PAGE_CLASS_NAME.parameterizedBy(entityClassName))
         fileSpecBuilder.addFunction(
             FunSpec.builder("queryPage")
                 .addTypeVariable(pageType)
@@ -264,7 +259,8 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             .firstOrNull {
                 it.hasBackingField
                         && !it.isDelegated()
-                        && it.isAnnotationPresent(TableId::class)
+                        && it.annotations.any { it.annotationType.resolve().declaration.qualifiedName?.asString() == TABLE_ID_QUALIFIED_NAME }
+//                        && it.isAnnotationPresent(TableId::class)
             }?.let { idProp ->
                 val idSimpleName = idProp.simpleName.asString()
                 fileSpecBuilder.addFunction(
@@ -336,13 +332,13 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             .toList()
 
         for (property in props) {
-            val tableField = property.getAnnotationsByType(TableField::class).firstOrNull()
-            val tableId = property.getAnnotationsByType(TableId::class).firstOrNull()
-            if (tableField?.exist == false) {
+            val tableField = property.findAnnotation(TABLE_FIELD_QUALIFIED_NAME)
+            val tableId = property.findAnnotation(TABLE_ID_QUALIFIED_NAME)
+            if (tableField?.getValue<Boolean>("exist") == false) {
                 continue
             }
-            val dbFieldName = tableId?.value
-                ?: tableField?.value
+            val dbFieldName: String = tableId?.getValue("value")
+                ?: tableField?.getValue("value")
                 ?: dbNamingConvention.convert(property.simpleName.asString())
             classBuilder.addProperty(
                 PropertySpec.builder(
@@ -386,6 +382,16 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         }
     }
 
+    private fun KSAnnotated.findAnnotation(name: String): KSAnnotation? {
+        return annotations.firstOrNull {
+            it.annotationType.resolve().declaration.qualifiedName?.asString() == name
+        }
+    }
+
+    private inline fun <reified T> KSAnnotation.getValue(name: String): T {
+        return arguments.first { it.name?.asString() == name }.value as T
+    }
+
     private fun findEntityType(ksType: KSType): KSClassDeclaration? {
         if (!BASE_MAPPER_TYPE.isAssignableFrom(ksType)) {
             return null
@@ -412,6 +418,10 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         val UNIT_CLASS_NAME = Unit::class.asClassName()
         val INT_CLASS_NAME = Int::class.asClassName()
         val LONG_CLASS_NAME = Long::class.asClassName()
+        const val TABLE_FIELD_QUALIFIED_NAME = "com.baomidou.mybatisplus.annotation.TableField"
+        const val TABLE_ID_QUALIFIED_NAME = "com.baomidou.mybatisplus.annotation.TableId"
+        val BASE_MAPPER_CLASS_NAME = ClassName("com.baomidou.mybatisplus.core.mapper", "BaseMapper")
+        val I_PAGE_CLASS_NAME = ClassName("com.baomidou.mybatisplus.core.metadata", "IPage")
         const val EXTENSION_CONSTRUCTOR_PARAMETER_NAME = "mapper"
 
     }
