@@ -353,7 +353,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                         extensionClassName,
                         property.type.resolve().makeNotNullable().toTypeName(),
                     )
-                ).addKdoc(doc)
+                ).addKdoc("%L", doc)
                     .initializer(
                         "%T(%S, this)",
                         fieldDefinitionClassName,

@@ -17,7 +17,7 @@ class Person {
     var id: Int? = null
 
     /**
-     * person name
+     * person name %
      */
     @TableField(value = NAME)
     var name: String? = null

@@ -38,7 +38,7 @@ class Person {
     var id: Int? = null
 
     /**
-     * person name
+     * person name %
      */
     var name: String? = null
     var age: Int? = null
