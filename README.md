@@ -4,7 +4,9 @@
 
 ## 快速开始
 
-在包含mapper的模块中添加依赖：
+### 安装
+
+#### gradle
 
 ```
 plugins {
@@ -18,13 +20,55 @@ dependencies {
 
 ```
 
-执行构建命令生成代码：
+### maven
 
-```shell
-./gradlew build
+```xml
+
+<dependency>
+    <groupId>io.github.afezeria</groupId>
+    <artifactId>mybatis-plus-wrapper-ext-runtime</artifactId>
+    <version>1.5.0</version>
+</dependency>
 ```
 
-## 配置
+```xml
+
+<plugin>
+    <groupId>org.jetbrains.kotlin</groupId>
+    <artifactId>kotlin-maven-plugin</artifactId>
+    <executions>
+        <execution>
+            <id>compile</id>
+            <phase>compile</phase>
+            <goals>
+                <goal>compile</goal>
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <compilerPlugins>
+            <compilerPlugin>ksp</compilerPlugin>
+        </compilerPlugins>
+        <pluginOptions>
+            <option>ksp:kotlinOutputDir=${project.basedir}/target/generated-sources/annotations</option>
+        </pluginOptions>
+    </configuration>
+    <dependencies>
+        <dependency>
+            <groupId>com.dyescape</groupId>
+            <artifactId>kotlin-maven-symbol-processing</artifactId>
+            <version>1.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.afezeria</groupId>
+            <artifactId>mybatis-plus-wrapper-ext-processor</artifactId>
+            <version>1.5.0</version>
+        </dependency>
+    </dependencies>
+</plugin>
+```
+
+### 配置
 
 ```groovy
 ksp {
