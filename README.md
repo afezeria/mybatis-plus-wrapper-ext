@@ -47,7 +47,7 @@ ksp {
 
 ## 使用说明
 
-实体及mapper：
+定义实体及mapper：
 
 ```kotlin
 @TableName("person")
@@ -56,12 +56,16 @@ class Person {
     var id: Int? = null
     var name: String? = null
     var age: Int? = null
+    var createTime: LocalDateTime? = null
+    var updateTime: LocalDateTime? = null
 }
 
 interface PersonMapper : BaseMapper<Person>
 ```
 
-生成的扩展函数签名：
+### 扩展函数
+
+以上定义在编译时会生成具有下述签名的扩展函数：
 
 ```kotlin
 fun PersonMapper.query(): PersonMapperQueryWrapper
@@ -74,12 +78,43 @@ fun PersonMapper.delete(fn: PersonMapperQueryWrapper.() -> Unit): Int
 fun PersonMapper.update(): PersonMapperUpdateWrapper
 fun PersonMapper.update(fn: PersonMapperUpdateWrapper.() -> Unit): Int
 fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateWrapper.() -> Unit): Int
-
 ```
 
-使用示例：
+### 包装器
+
+扩展函数签名中的`PersonMapperQueryWrapper`和`PersonMapperUpdateWrapper`是对mybatis-plus原生`QueryWrapper`
+和`UpdateWrapper`类的包装，
+包含了字段名和类型等信息，两种类的具体差别如下：
+
+- QueryWrapper
+    - 表达式函数：between, eq, ge, gt, in, isNotNull, isNull, le, like, likeLeft, likeRight, lt, ne, notBetween, notIn,
+      notLike, notLikeLeft, notLikeRight, and, or
+    - 终止方法：toList(), toOne(), toCount(), delete()(不建议在`mapper.query()`后调用delete方法，请使用`mapper.delete()`)
+    - 获取`QueryWrapper`对象：wrapper
+- UpdateWrapper
+    - 表达式函数：在QueryWrapper的基础上增加了set
+    - 终止方法：update()
+    - 获取`UpdateWrapper`对象：wrapper
+
+### 表达式函数
+
+表达式函数基本都存在三个重载，以eq为例：
 
 ```kotlin
+infix fun eq(value: T): ME
+
+fun eq(condition: Boolean, value: T): ME
+
+fun eq(condition: Boolean, value: () -> T): ME
+```
+
+T为字段类型范型参数，ME为包装类型范型参数。除了参数类型为集合的in函数外，其他表达式函数的表达字段类型的范型参数都是非空类型
+
+### 示例
+
+```kotlin
+import java.time.LocalDateTime
+
 //等价于：mapper.selectList(Wrappers.query<Person?>().like("name", "a"))
 mapper.query()
     .NAME.like("a")
@@ -89,6 +124,44 @@ mapper.query()
 mapper.queryList {
     AGE.gt(1)
 }
+
+//等价于：
+//mapper.selectList(
+//    Wrappers.query<Person?>().apply {
+//        gt("age", 1)
+//        if (createTimeStr != null) {
+//            LocalDateTime.parse(createTimeStr!!)
+//        }
+//    }
+//)
+mapper.queryList {
+    AGE.gt(1)
+    CREATE_TIME.gt(createTimeStr != null) {
+        LocalDateTime.parse(createTimeStr!!)
+    }
+}
+
+//等价于：mapper.selectList(Wrappers.query<Person?>().gt("id", 1).and { it.gt("age", 1) })
+mapper.queryList {
+    ID.gt(1)
+    and {
+        AGE gt 1
+    }
+}
+
+//等价于：mapper.selectList(Wrappers.query<Person?>().gt("id", 1).and { it.gt("age", 1) })
+mapper.queryList {
+    ID.gt(1)
+    or()
+    AGE.gt(1)
+}
+mapper.queryList {
+    ID.gt(1)
+    or {
+        AGE.gt(1)
+    }
+}
+
 
 //等价于：mapper.selectPage(Page(1, 2), Wrappers.query<Person?>().gt("age", 1))
 mapper.queryPage(Page(1, 2)) {
@@ -136,27 +209,6 @@ mapper.updateById(1) {
 
 ```
 
-对于wrapper的包装有两种：
-
-- QueryWrapper
-    - 表达式函数：between, eq, ge, gt, in, isNotNull, isNull, le, like, likeLeft, likeRight, lt, ne, notBetween, notIn,
-      notLike, notLikeLeft, notLikeRight, and, or
-    - 终止方法：toList(), toOne(), toCount(), delete()
-- UpdateWrapper
-    - 表达式函数：在QueryWrapper的基础上增加了set
-    - 终止方法：update()
-
-表达式函数基本都存在三个重载，以eq为例：
-
-```kotlin
-//T为字段类型，ME为扩展类型
-infix fun eq(value: T): ME
-
-fun eq(condition: Boolean, value: T): ME
-
-fun eq(condition: Boolean, value: () -> T): ME
-```
-
 ## Q&A
 
 ### 为什么需要指定属性名和字段名的转换规则？
@@ -165,7 +217,7 @@ fun eq(condition: Boolean, value: () -> T): ME
 
 ### 为什么包装QueryWrapper而不是KtQueryWrapper?
 
-因为KtQueryWrapper限制了字段只能通过KMutableProperty指定，在当前库已经提供了类型安全和自动补全的情况下这个限制有点多余。
+因为KtQueryWrapper限制了字段只能通过KMutableProperty指定，在已经提供了类型安全和自动补全的情况下不再需要这个限制。
 
 ## License
 
