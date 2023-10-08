@@ -149,7 +149,7 @@ mapper.queryList {
     }
 }
 
-//等价于：mapper.selectList(Wrappers.query<Person?>().gt("id", 1).and { it.gt("age", 1) })
+//等价于：mapper.selectList(Wrappers.query<Person?>().gt("id", 1).or { it.gt("age", 1) })
 mapper.queryList {
     ID.gt(1)
     or()
