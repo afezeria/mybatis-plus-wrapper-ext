@@ -16,6 +16,9 @@ class Person {
     @TableId("id", type = IdType.AUTO)
     var id: Int? = null
 
+    /**
+     * person name
+     */
     @TableField(value = NAME)
     var name: String? = null
     val age: Int? = null

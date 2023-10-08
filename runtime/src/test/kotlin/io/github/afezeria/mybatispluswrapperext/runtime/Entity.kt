@@ -12,6 +12,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper
  */
 @TableName("person")
 class Person {
+    /**
+     * primary key
+     */
     @TableId("id", type = IdType.AUTO)
     var id: Int? = null
 

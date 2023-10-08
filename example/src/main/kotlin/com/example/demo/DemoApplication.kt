@@ -31,9 +31,15 @@ fun main(args: Array<String>) {
 
 @TableName("person")
 class Person {
+    /**
+     * primary key
+     */
     @TableId("id", type = IdType.AUTO)
     var id: Int? = null
 
+    /**
+     * person name
+     */
     var name: String? = null
     var age: Int? = null
     val imgs: Array<Byte>? = null

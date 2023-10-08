@@ -20,6 +20,12 @@ class PersonMapperQueryWrapper(
     mapper: PersonMapper,
 ) : AbstractQueryWrapper<PersonMapperQueryWrapper, PersonMapper, Person>(mapper) {
 
+
+    /**
+     *  person name
+     *
+     * @see io.github.afezeria.mybatispluswrapperext.processor.mapper.Person.name
+     */
     val ID = FieldDefinition<PersonMapperQueryWrapper, Int>("id", this)
 
     val NAME: FieldDefinition<PersonMapperQueryWrapper, String>

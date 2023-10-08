@@ -340,6 +340,12 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             val dbFieldName: String = tableId?.getValue("value")
                 ?: tableField?.getValue("value")
                 ?: dbNamingConvention.convert(property.simpleName.asString())
+
+            val doc = if (property.docString.isNullOrBlank()) {
+                ""
+            } else {
+                property.docString!!.trim() + "\n\n"
+            } + "@see ${property.qualifiedName?.asString()}"
             classBuilder.addProperty(
                 PropertySpec.builder(
                     NamingConvention.CONSTANT_CASE.convert(property.simpleName.asString()),
@@ -347,11 +353,12 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                         extensionClassName,
                         property.type.resolve().makeNotNullable().toTypeName(),
                     )
-                ).initializer(
-                    "%T(%S, this)",
-                    fieldDefinitionClassName,
-                    dbFieldName
-                ).build()
+                ).addKdoc(doc)
+                    .initializer(
+                        "%T(%S, this)",
+                        fieldDefinitionClassName,
+                        dbFieldName
+                    ).build()
             )
         }
         fileSpecBuilder.addType(classBuilder.build())
