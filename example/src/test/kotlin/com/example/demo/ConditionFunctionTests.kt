@@ -99,6 +99,9 @@ class ConditionFunctionTests {
             ID.`in`(listOf(2, 3, 4))
         }.size shouldBe 2
         mapper.queryList {
+            ID.`in`(listOf(null, 3, 4))
+        }.size shouldBe 1
+        mapper.queryList {
             ID.`in`(true, 2)
         }.size shouldBe 1
         mapper.queryList {
@@ -278,6 +281,9 @@ class ConditionFunctionTests {
         mapper.queryList {
             ID.notIn(listOf(2, 3, 4))
         }.size shouldBe 1
+        mapper.queryList {
+            ID.notIn(listOf(2, null, 4))
+        }.size shouldBe 2
         mapper.queryList {
             ID.notIn(true, 2)
         }.size shouldBe 1

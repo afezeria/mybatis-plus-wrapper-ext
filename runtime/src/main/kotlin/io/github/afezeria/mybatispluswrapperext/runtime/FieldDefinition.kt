@@ -83,7 +83,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
         return owner
     }
 
-    fun `in`(values: Collection<T>): ME {
+    fun `in`(values: Collection<T?>): ME {
         owner.wrapper.`in`(name, values)
         return owner
     }
@@ -93,7 +93,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
         return owner
     }
 
-    fun `in`(condition: Boolean, values: Collection<T>): ME {
+    fun `in`(condition: Boolean, values: Collection<T?>): ME {
         if (condition) {
             owner.wrapper.`in`(name, values)
         }
@@ -107,14 +107,14 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
         return owner
     }
 
-    fun `in`(condition: Boolean, values: () -> Collection<T>): ME {
+    fun `in`(condition: Boolean, values: () -> Collection<T?>): ME {
         if (condition) {
             owner.wrapper.`in`(name, values())
         }
         return owner
     }
 
-    fun notIn(values: Collection<T>): ME {
+    fun notIn(values: Collection<T?>): ME {
         owner.wrapper.notIn(name, values)
         return owner
     }
@@ -124,7 +124,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
         return owner
     }
 
-    fun notIn(condition: Boolean, values: Collection<T>): ME {
+    fun notIn(condition: Boolean, values: Collection<T?>): ME {
         if (condition) {
             owner.wrapper.notIn(name, values)
         }
@@ -138,7 +138,7 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
         return owner
     }
 
-    fun notIn(condition: Boolean, values: () -> Collection<T>): ME {
+    fun notIn(condition: Boolean, values: () -> Collection<T?>): ME {
         if (condition) {
             owner.wrapper.notIn(name, values())
         }
