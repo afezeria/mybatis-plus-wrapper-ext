@@ -114,6 +114,18 @@ interface PersonMapper : BaseMapper<Person>
 ```kotlin
 fun PersonMapper.query(): PersonMapperQueryWrapper
 fun PersonMapper.queryList(fn: PersonMapperQueryWrapper.() -> Unit): List<Person>
+fun <F> PersonMapper.querySingleField(
+    columnFn: PersonMapperQueryWrapper.() -> FieldDefinition<PersonMapperQueryWrapper, *, F>,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): List<F>
+fun <F1, F2> PersonMapper.queryPair(
+    columnsFn: PersonMapperQueryWrapper.() -> Pair<FieldDefinition<PersonMapperQueryWrapper, *, F1>, FieldDefinition<PersonMapperQueryWrapper, *, F2>>,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): List<Pair<F1, F2>>
+fun <F1, F2, F3> PersonMapper.queryTriple(
+    columnsFn: PersonMapperQueryWrapper.() -> Triple<FieldDefinition<PersonMapperQueryWrapper, *, F1>, FieldDefinition<PersonMapperQueryWrapper, *, F2>, FieldDefinition<PersonMapperQueryWrapper, *, F3>>,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): List<Triple<F1, F2, F3>>
 fun <P : IPage<Person>> PersonMapper.queryPage(page: P, fn: PersonMapperQueryWrapper.() -> Unit): P
 fun PersonMapper.queryOne(fn: PersonMapperQueryWrapper.() -> Unit): Person?
 fun PersonMapper.queryCount(fn: PersonMapperQueryWrapper.() -> Unit): Long
@@ -206,6 +218,37 @@ mapper.queryList {
     }
 }
 
+
+//等价于：
+//mapper.selectMaps(
+//    Wrappers.query<Person?>()
+//        .select("`name`")
+//        .isNotNull("`name`")
+//).map { it?.get("name") as String }
+mapper.querySingleField({ NAME.markNotNull }) {
+    NAME.isNotNull()
+}
+
+//等价于：
+//mapper.selectMaps(
+//    Wrappers.query<Person?>()
+//        .select("`name`", "age")
+//        .gt("id", 1)
+//).map {
+//    Pair(it?.get("name") as String?, it?.get("age") as Int?)
+//}
+mapper.queryPair({ NAME to AGE }) {
+    ID.gt(1)
+}
+
+//等价于：
+//mapper.selectMaps(
+//    Wrappers.query<Person?>()
+//        .select("id", "`name`", "age")
+//).map {
+//    Triple(it?.get("id") as Int?, it?.get("name") as String?, it?.get("age") as Int?)
+//}
+mapper.queryTriple({ Triple(ID, NAME, AGE) }) {}
 
 //等价于：mapper.selectPage(Page(1, 2), Wrappers.query<Person?>().gt("age", 1))
 mapper.queryPage(Page(1, 2)) {

@@ -28,7 +28,7 @@ class PersonMapperQueryWrapper(
      */
     val ID = FieldDefinition<PersonMapperQueryWrapper, Int, Int?>("id", this)
 
-    val NAME: FieldDefinition<PersonMapperQueryWrapper, String, Int?>
+    val NAME: FieldDefinition<PersonMapperQueryWrapper, String, String?>
         get() = FieldDefinition("name", this)
 
     val AGE: FieldDefinition<PersonMapperQueryWrapper, Int, Int?>
@@ -136,9 +136,35 @@ fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateWrapper.() -> Unit): 
 
 fun main() {
     generateAssert()
+    val map = mapper.selectMaps(
+        Wrappers.query<Person?>()
+            .select("`name`")
+            .isNotNull("`name`")
+    ).map { it?.get("name") as String }
+    val querySingleField = mapper.querySingleField({ NAME.markNotNull }) {
+        NAME.isNotNull()
+    }
+
+    val b = mapper.selectMaps(
+        Wrappers.query<Person?>()
+            .select("`name`", "age")
+            .gt("id", 1)
+    ).map {
+        Pair(it?.get("name") as String?, it?.get("age") as Int?)
+    }
+    mapper.queryPair({ NAME to AGE }) {
+        ID.gt(1)
+    }
+    val c = mapper.selectMaps(
+        Wrappers.query<Person?>()
+            .select("id", "`name`", "age")
+    ).map {
+        Triple(it?.get("id") as Int?, it?.get("name") as String?, it?.get("age") as Int?)
+    }
+    mapper.queryTriple({ Triple(ID, NAME, AGE) }) {}
+
     mapper.delete {
         ID.eq(1)
-
     }
 //    println(
 //        mapper.update()

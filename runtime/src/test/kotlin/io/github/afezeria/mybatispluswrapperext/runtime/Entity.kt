@@ -18,7 +18,7 @@ class Person {
     @TableId("id", type = IdType.AUTO)
     var id: Int? = null
 
-    @TableField(value = "")
+    @TableField(value = "`name`")
     var name: String? = null
     var age: Int? = null
 
