@@ -155,6 +155,96 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .build()
         )
 
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("querySingleField")
+                .addTypeVariable(TYPE_VAR_F1)
+                .receiver(mapperClassName)
+                .returns(List::class.asClassName().parameterizedBy(TYPE_VAR_F1))
+                .addParameter(
+                    "columnFn",
+                    LambdaTypeName.get(
+                        queryExtensionClassName,
+                        emptyList(),
+                        FieldDefinition::class.asTypeName().parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F1)
+                    )
+                )
+                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val w = %T(this)
+                    fn(w)
+                    return w.toSingleFieldList(columnFn)
+                """.trimIndent(), queryExtensionClassName
+                )
+                .build()
+        )
+
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("queryPair")
+                .addTypeVariable(TYPE_VAR_F1)
+                .addTypeVariable(TYPE_VAR_F2)
+                .receiver(mapperClassName)
+                .returns(LIST_CLASS_NAME.parameterizedBy(PAIR_CLASS_NAME.parameterizedBy(TYPE_VAR_F1, TYPE_VAR_F2)))
+                .addParameter(
+                    "columnsFn",
+                    LambdaTypeName.get(
+                        queryExtensionClassName,
+                        emptyList(),
+                        PAIR_CLASS_NAME.parameterizedBy(
+                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F1),
+                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F2),
+                        )
+                    )
+                )
+                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val w = %T(this)
+                    fn(w)
+                    return w.toPairList(columnsFn)
+                """.trimIndent(), queryExtensionClassName
+                )
+                .build()
+        )
+
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("queryTriple")
+                .addTypeVariable(TYPE_VAR_F1)
+                .addTypeVariable(TYPE_VAR_F2)
+                .addTypeVariable(TYPE_VAR_F3)
+                .receiver(mapperClassName)
+                .returns(
+                    LIST_CLASS_NAME.parameterizedBy(
+                        TRIPLE_CLASS_NAME.parameterizedBy(
+                            TYPE_VAR_F1,
+                            TYPE_VAR_F2,
+                            TYPE_VAR_F3
+                        )
+                    )
+                )
+                .addParameter(
+                    "columnsFn",
+                    LambdaTypeName.get(
+                        queryExtensionClassName,
+                        emptyList(),
+                        TRIPLE_CLASS_NAME.parameterizedBy(
+                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F1),
+                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F2),
+                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F3),
+                        )
+                    )
+                )
+                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val w = %T(this)
+                    fn(w)
+                    return w.toTripleList(columnsFn)
+                """.trimIndent(), queryExtensionClassName
+                )
+                .build()
+        )
+
         val pageType = TypeVariableName("P", I_PAGE_CLASS_NAME.parameterizedBy(entityClassName))
         fileSpecBuilder.addFunction(
             FunSpec.builder("queryPage")
@@ -200,6 +290,8 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 )
                 .build()
         )
+
+        //delete==========
         fileSpecBuilder.addFunction(
             FunSpec.builder("delete")
                 .receiver(mapperClassName)
@@ -260,7 +352,6 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 it.hasBackingField
                         && !it.isDelegated()
                         && it.annotations.any { it.annotationType.resolve().declaration.qualifiedName?.asString() == TABLE_ID_QUALIFIED_NAME }
-//                        && it.isAnnotationPresent(TableId::class)
             }?.let { idProp ->
                 val idSimpleName = idProp.simpleName.asString()
                 fileSpecBuilder.addFunction(
@@ -301,15 +392,15 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 mapperClassName.packageName,
                 "${mapperClassName.simpleName}UpdateWrapper"
             )
-            abstractMapperExtension = AbstractUpdateWrapper::class.asClassName()
-            fieldDefinitionClassName = UpdateFieldDefinition::class.asClassName()
+            abstractMapperExtension = ABSTRACT_UPDATE_WRAPPER_CLASS_NAME
+            fieldDefinitionClassName = UPDATE_FIELD_DEFINITION_CLASS_NAME
         } else {
             extensionClassName = ClassName(
                 mapperClassName.packageName,
                 "${mapperClassName.simpleName}QueryWrapper"
             )
-            abstractMapperExtension = AbstractQueryWrapper::class.asClassName()
-            fieldDefinitionClassName = FieldDefinition::class.asClassName()
+            abstractMapperExtension = ABSTRACT_QUERY_WRAPPER_CLASS_NAME
+            fieldDefinitionClassName = FIELD_DEFINITION_CLASS_NAME
         }
 
         val classBuilder = TypeSpec.classBuilder(extensionClassName)
@@ -352,6 +443,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                     fieldDefinitionClassName.parameterizedBy(
                         extensionClassName,
                         property.type.resolve().makeNotNullable().toTypeName(),
+                        property.type.resolve().toTypeName()
                     )
                 ).addKdoc("%L", doc)
                     .initializer(
@@ -425,6 +517,19 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         val UNIT_CLASS_NAME = Unit::class.asClassName()
         val INT_CLASS_NAME = Int::class.asClassName()
         val LONG_CLASS_NAME = Long::class.asClassName()
+        val LIST_CLASS_NAME = List::class.asClassName()
+        val PAIR_CLASS_NAME = Pair::class.asClassName()
+        val TRIPLE_CLASS_NAME = Triple::class.asClassName()
+
+        val FIELD_DEFINITION_CLASS_NAME = FieldDefinition::class.asClassName()
+        val UPDATE_FIELD_DEFINITION_CLASS_NAME = UpdateFieldDefinition::class.asClassName()
+        val ABSTRACT_QUERY_WRAPPER_CLASS_NAME = AbstractQueryWrapper::class.asClassName()
+        val ABSTRACT_UPDATE_WRAPPER_CLASS_NAME = AbstractUpdateWrapper::class.asClassName()
+
+        val TYPE_VAR_F1 = TypeVariableName("F1")
+        val TYPE_VAR_F2 = TypeVariableName("F2")
+        val TYPE_VAR_F3 = TypeVariableName("F3")
+
         const val TABLE_FIELD_QUALIFIED_NAME = "com.baomidou.mybatisplus.annotation.TableField"
         const val TABLE_ID_QUALIFIED_NAME = "com.baomidou.mybatisplus.annotation.TableId"
         val BASE_MAPPER_CLASS_NAME = ClassName("com.baomidou.mybatisplus.core.mapper", "BaseMapper")
@@ -432,4 +537,11 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         const val EXTENSION_CONSTRUCTOR_PARAMETER_NAME = "mapper"
 
     }
+}
+
+fun main() {
+    val a = List::class.asClassName()
+    val b = a.parameterizedBy(Int::class.asTypeName())
+    println(a)
+    println(b)
 }

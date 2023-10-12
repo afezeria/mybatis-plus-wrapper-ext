@@ -1,9 +1,6 @@
 package com.example.demo
 
-import com.baomidou.mybatisplus.annotation.DbType
-import com.baomidou.mybatisplus.annotation.IdType
-import com.baomidou.mybatisplus.annotation.TableId
-import com.baomidou.mybatisplus.annotation.TableName
+import com.baomidou.mybatisplus.annotation.*
 import com.baomidou.mybatisplus.core.mapper.BaseMapper
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor
@@ -41,6 +38,8 @@ class Person {
      * person name %
      */
     var name: String? = null
+
+    @TableField("`age`")
     var age: Int? = null
     val imgs: Array<Byte>? = null
     var createTime: LocalDateTime? = null

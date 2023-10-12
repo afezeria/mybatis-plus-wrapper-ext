@@ -1,6 +1,7 @@
 package com.example.demo
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
+import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -38,10 +39,31 @@ class ExtensionFunctionTests {
         mapper.queryList {
             AGE.isNotNull()
         }.size shouldBe 2
+
         mapper.queryPage(Page(1, 1, true)) {}.let { p ->
             p.size shouldBe 1
             p.total shouldBe 3
         }
+    }
+
+    @Test
+    fun querySingleField() {
+        mapper.querySingleField({ AGE }) {} shouldContainExactly listOf(1, 2, null)
+        mapper.querySingleField({ ID.markNotNull }) {} shouldContainExactly listOf(1, 2, 3)
+    }
+
+    @Test
+    fun queryPair() {
+        mapper.queryPair({ NAME to AGE }) {} shouldContainExactly listOf("aba" to 1, "abb" to 2, "abc" to null)
+    }
+
+    @Test
+    fun queryTriple() {
+        mapper.queryTriple({ Triple(ID, NAME, AGE) }) {} shouldContainExactly listOf(
+            Triple(1, "aba", 1),
+            Triple(2, "abb", 2),
+            Triple(3, "abc", null)
+        )
     }
 
     @Test

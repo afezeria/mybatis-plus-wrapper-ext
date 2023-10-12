@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.annotation.TableName
 import java.time.LocalDateTime
 
 const val NAME = "Name"
+
 @TableName("person")
 class Person {
     @TableId("id", type = IdType.AUTO)
@@ -21,7 +22,10 @@ class Person {
      */
     @TableField(value = NAME)
     var name: String? = null
-    val age: Int? = null
+    var age: Int? = null
+
+    @TableField(value = "`createTime`")
+    lateinit var createTime: LocalDateTime
 
     val now: LocalDateTime
         get() = LocalDateTime.now()

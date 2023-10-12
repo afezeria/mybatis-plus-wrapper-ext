@@ -26,12 +26,12 @@ class PersonMapperQueryWrapper(
      *
      * @see io.github.afezeria.mybatispluswrapperext.processor.mapper.Person.name
      */
-    val ID = FieldDefinition<PersonMapperQueryWrapper, Int>("id", this)
+    val ID = FieldDefinition<PersonMapperQueryWrapper, Int, Int?>("id", this)
 
-    val NAME: FieldDefinition<PersonMapperQueryWrapper, String>
+    val NAME: FieldDefinition<PersonMapperQueryWrapper, String, Int?>
         get() = FieldDefinition("name", this)
 
-    val AGE: FieldDefinition<PersonMapperQueryWrapper, Int>
+    val AGE: FieldDefinition<PersonMapperQueryWrapper, Int, Int?>
         get() = FieldDefinition("age", this)
 }
 
@@ -45,6 +45,34 @@ fun PersonMapper.queryList(fn: PersonMapperQueryWrapper.() -> Unit): List<Person
     return PersonMapperQueryWrapper(this).apply {
         fn(this)
     }.toList()
+}
+
+fun <F> PersonMapper.querySingleField(
+    columnFn: PersonMapperQueryWrapper.() -> FieldDefinition<PersonMapperQueryWrapper, *, F>,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): List<F> {
+    val w = PersonMapperQueryWrapper(this)
+    fn(w)
+    return w.toSingleFieldList(columnFn)
+
+}
+
+fun <F1, F2> PersonMapper.queryPair(
+    columnsFn: PersonMapperQueryWrapper.() -> Pair<FieldDefinition<PersonMapperQueryWrapper, *, F1>, FieldDefinition<PersonMapperQueryWrapper, *, F2>>,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): List<Pair<F1, F2>> {
+    val w = PersonMapperQueryWrapper(this)
+    fn(w)
+    return w.toPairList(columnsFn)
+}
+
+fun <F1, F2, F3> PersonMapper.queryTriple(
+    columnsFn: PersonMapperQueryWrapper.() -> Triple<FieldDefinition<PersonMapperQueryWrapper, *, F1>, FieldDefinition<PersonMapperQueryWrapper, *, F2>, FieldDefinition<PersonMapperQueryWrapper, *, F3>>,
+    fn: PersonMapperQueryWrapper.() -> Unit
+): List<Triple<F1, F2, F3>> {
+    val w = PersonMapperQueryWrapper(this)
+    fn(w)
+    return w.toTripleList(columnsFn)
 }
 
 fun <P : IPage<Person>> PersonMapper.queryPage(
@@ -82,11 +110,11 @@ class PersonMapperUpdateWrapper(
     mapper: PersonMapper,
 ) : AbstractUpdateWrapper<PersonMapperUpdateWrapper, PersonMapper, Person>(mapper) {
 
-    val ID = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int>("id", this)
+    val ID = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int, Int?>("id", this)
 
-    val NAME = UpdateFieldDefinition<PersonMapperUpdateWrapper, String>("name", this)
+    val NAME = UpdateFieldDefinition<PersonMapperUpdateWrapper, String, String?>("name", this)
 
-    val AGE = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int>("age", this)
+    val AGE = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int, Int?>("age", this)
 }
 
 fun PersonMapper.update(): PersonMapperUpdateWrapper {

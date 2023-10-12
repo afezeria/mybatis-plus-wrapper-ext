@@ -23,7 +23,7 @@ abstract class AbstractWrapperWrapper<
     val wrapper get() = stack.last()
 
     @Suppress("UNCHECKED_CAST")
-    private val self: S = this as S
+    protected val self: S = this as S
 
     fun and(fn: S.() -> Unit): S {
         wrapper.and {
@@ -81,6 +81,42 @@ abstract class AbstractQueryWrapper<
 
     fun toList(): List<T> {
         return mapper.selectList(wrapper)
+    }
+
+    fun <F> toSingleFieldList(columnFn: S.() -> FieldDefinition<S, *, F>): List<F> {
+        val column = columnFn(self)
+        wrapper.select(column.name)
+        return mapper.selectMaps(wrapper).map {
+            @Suppress("UNCHECKED_CAST")
+            it?.get(column.trimName) as F
+        }
+    }
+
+    fun <F1, F2> toPairList(columnsFn: S.() -> Pair<FieldDefinition<S, *, F1>, FieldDefinition<S, *, F2>>): List<Pair<F1, F2>> {
+        val columns = columnsFn(self)
+        wrapper.select(columns.first.name, columns.second.name)
+        return mapper.selectMaps(wrapper).map {
+            @Suppress("UNCHECKED_CAST")
+            Pair(
+                it?.get(columns.first.trimName) as F1,
+                it?.get(columns.second.trimName) as F2,
+            )
+        }
+    }
+
+    fun <F1, F2, F3> toTripleList(
+        columnsFn: S.() -> Triple<FieldDefinition<S, *, F1>, FieldDefinition<S, *, F2>, FieldDefinition<S, *, F3>>
+    ): List<Triple<F1, F2, F3>> {
+        val columns = columnsFn(self)
+        wrapper.select(columns.first.name, columns.second.name, columns.third.name)
+        @Suppress("UNCHECKED_CAST")
+        return mapper.selectMaps(wrapper).map {
+            Triple(
+                it?.get(columns.first.trimName) as F1,
+                it?.get(columns.second.trimName) as F2,
+                it?.get(columns.third.trimName) as F3
+            )
+        }
     }
 
     fun <P : IPage<T>> toPage(page: P): P {

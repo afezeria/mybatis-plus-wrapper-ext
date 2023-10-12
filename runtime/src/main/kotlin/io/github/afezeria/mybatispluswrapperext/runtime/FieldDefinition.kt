@@ -1,10 +1,13 @@
 package io.github.afezeria.mybatispluswrapperext.runtime
 
-open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
-    protected val name: String,
+open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T, VT>(
+    val name: String,
     protected val owner: ME,
 ) {
+    val trimName = name.trim('`', '"', '\'')
 
+    @Suppress("UNCHECKED_CAST")
+    val markNotNull: FieldDefinition<ME, T, VT & Any> = this as FieldDefinition<ME, T, VT & Any>
 
     fun between(value1: T, value2: T): ME {
         owner.wrapper.between(name, value1, value2)
@@ -361,10 +364,10 @@ open class FieldDefinition<ME : AbstractWrapperWrapper<*, *, *, *>, T>(
     }
 }
 
-class UpdateFieldDefinition<ME : AbstractUpdateWrapper<*, *, *>, T>(
+class UpdateFieldDefinition<ME : AbstractUpdateWrapper<*, *, *>, T, VT>(
     name: String,
     owner: ME,
-) : FieldDefinition<ME, T>(name, owner) {
+) : FieldDefinition<ME, T, VT>(name, owner) {
     fun set(value: T): ME {
         owner.wrapper.set(name, value)
         return owner
