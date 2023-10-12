@@ -14,8 +14,8 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.5.0")
-    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.5.0")
+    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.6.0")
+    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.6.0")
 }
 
 ```
