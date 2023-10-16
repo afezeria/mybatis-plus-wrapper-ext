@@ -14,8 +14,8 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.6.0")
-    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.6.0")
+    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.7.0")
+    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.7.0")
 }
 
 ```
@@ -27,7 +27,7 @@ dependencies {
 <dependency>
     <groupId>io.github.afezeria</groupId>
     <artifactId>mybatis-plus-wrapper-ext-runtime</artifactId>
-    <version>1.5.0</version>
+    <version>1.7.0</version>
 </dependency>
 ```
 
@@ -62,7 +62,7 @@ dependencies {
         <dependency>
             <groupId>io.github.afezeria</groupId>
             <artifactId>mybatis-plus-wrapper-ext-processor</artifactId>
-            <version>1.5.0</version>
+            <version>1.7.0</version>
         </dependency>
     </dependencies>
 </plugin>
@@ -148,7 +148,7 @@ fun PersonMapper.updateById(id: Int, fn: PersonMapperUpdateWrapper.() -> Unit): 
     - 终止方法：toList(), toOne(), toCount(), delete()(不建议在`mapper.query()`后调用delete方法，请使用`mapper.delete()`)
     - 获取`QueryWrapper`对象：wrapper
 - UpdateWrapper
-    - 表达式函数：在QueryWrapper的基础上增加了set
+    - 表达式函数：在QueryWrapper的基础上增加了set和setNull
     - 终止方法：update()
     - 获取`UpdateWrapper`对象：wrapper
 
@@ -285,6 +285,11 @@ mapper.update()
 mapper.update {
     NAME.set("abc")
     AGE.eq(1)
+}
+mapper.where {
+    AGE.eq(1)
+}.update {
+    NAME.set("abc")
 }
 
 //等价于：mapper.update(null, Wrappers.update<Person?>().set("name", "abc").eq("id", 1))
