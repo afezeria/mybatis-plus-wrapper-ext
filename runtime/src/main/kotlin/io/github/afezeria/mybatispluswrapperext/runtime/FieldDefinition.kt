@@ -380,6 +380,18 @@ class UpdateFieldDefinition<ME : AbstractUpdateWrapper<*, *, *>, T, VT>(
         return owner
     }
 
+    fun setNull(): ME {
+        owner.wrapper.set(name, null)
+        return owner
+    }
+
+    fun setNull(condition: Boolean): ME {
+        if (condition) {
+            owner.wrapper.set(name, null)
+        }
+        return owner
+    }
+
     fun set(condition: Boolean, value: () -> T): ME {
         if (condition) {
             owner.wrapper.set(name, value())

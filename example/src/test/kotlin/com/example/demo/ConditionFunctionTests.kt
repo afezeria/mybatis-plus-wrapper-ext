@@ -274,6 +274,7 @@ class ConditionFunctionTests {
         }.size shouldBe 3
     }
 
+    @Test
     fun notIn() {
         mapper.queryList {
             ID.notIn(2, 3, 4)
@@ -432,6 +433,36 @@ class ConditionFunctionTests {
             age shouldBe 1
             createTime shouldBe LocalDateTime.MIN
         }
+    }
+
+    @Test
+    fun setNull() {
+        mapper.selectById(1).apply {
+            name shouldBe "aba"
+        }
+        mapper.updateById(1) {
+            NAME.setNull()
+        }
+        mapper.selectById(1).apply {
+            name shouldBe null
+        }
+    }
+
+    @Test
+    fun setNullWithCondition() {
+        mapper.selectById(1).apply {
+            name shouldBe "aba"
+            age shouldBe 1
+        }
+        mapper.updateById(1) {
+            NAME.setNull(false)
+            AGE.setNull(true)
+        }
+        mapper.selectById(1).apply {
+            name shouldBe "aba"
+            age shouldBe null
+        }
+
     }
 }
 //between, eq, ge, gt, in, isNotNull, isNull, le, like, likeLeft, likeRight, lt, ne, notBetween, notIn,notLike, notLikeLeft, notLikeRight, and, or
