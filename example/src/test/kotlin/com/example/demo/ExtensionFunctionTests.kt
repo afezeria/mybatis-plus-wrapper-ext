@@ -104,5 +104,16 @@ class ExtensionFunctionTests {
         mapper.query().ID.eq(3).toOne()!!.name shouldBe "bcd"
     }
 
+    @Test
+    fun updateWithWhere() {
+        mapper.query().ID.eq(1).toOne()!!.name shouldBe "aba"
+        mapper.where {
+            ID.eq(1)
+        }.update {
+            NAME.set("bcd")
+        }
+        mapper.query().ID.eq(1).toOne()!!.name shouldBe "bcd"
+    }
+
 
 }

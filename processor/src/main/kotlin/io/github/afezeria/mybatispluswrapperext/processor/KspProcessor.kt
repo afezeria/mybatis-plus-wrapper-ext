@@ -347,6 +347,55 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 )
                 .build()
         )
+//        fun PersonMapper.where(whereFn: PersonMapperUpdateWrapper.() -> Unit): Pair<PersonMapper, PersonMapperUpdateWrapper.() -> Unit> {
+//            return this to whereFn
+//        }
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("where")
+                .receiver(mapperClassName)
+                .returns(
+                    PAIR_CLASS_NAME.parameterizedBy(
+                        mapperClassName,
+                        LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME)
+                    )
+                )
+                .addParameter("whereFn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val p = this to whereFn
+                    return p
+                """.trimIndent()
+                )
+                .build()
+        )
+//
+//        fun Pair<PersonMapper, PersonMapperUpdateWrapper.() -> Unit>.update(setFn: PersonMapperUpdateWrapper.() -> Unit): Int {
+//            val w = PersonMapperUpdateWrapper(first)
+//            second(w)
+//            setFn(w)
+//            return w.update()
+//        }
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("update")
+                .receiver(
+                    PAIR_CLASS_NAME.parameterizedBy(
+                        mapperClassName,
+                        LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME)
+                    )
+                )
+                .returns(INT_CLASS_NAME)
+                .addParameter("setFn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val w = %T(first)
+                    second(w)
+                    setFn(w)
+                    return w.update()
+                """.trimIndent(), updateExtensionClassName
+                )
+                .build()
+        )
+
         entityClass.getAllProperties()
             .firstOrNull {
                 it.hasBackingField

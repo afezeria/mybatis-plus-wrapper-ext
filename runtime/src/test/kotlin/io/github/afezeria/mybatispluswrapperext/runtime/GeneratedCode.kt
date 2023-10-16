@@ -117,6 +117,17 @@ class PersonMapperUpdateWrapper(
     val AGE = UpdateFieldDefinition<PersonMapperUpdateWrapper, Int, Int?>("age", this)
 }
 
+fun PersonMapper.where(whereFn: PersonMapperUpdateWrapper.() -> Unit): Pair<PersonMapper, PersonMapperUpdateWrapper.() -> Unit> {
+    return this to whereFn
+}
+
+fun Pair<PersonMapper, PersonMapperUpdateWrapper.() -> Unit>.update(setFn: PersonMapperUpdateWrapper.() -> Unit): Int {
+    val w = PersonMapperUpdateWrapper(first)
+    second(w)
+    setFn(w)
+    return w.update()
+}
+
 fun PersonMapper.update(): PersonMapperUpdateWrapper {
     return PersonMapperUpdateWrapper(this)
 }
@@ -143,6 +154,12 @@ fun main() {
     ).map { it?.get("name") as String }
     val querySingleField = mapper.querySingleField({ NAME.markNotNull }) {
         NAME.isNotNull()
+    }
+
+    mapper.where {
+        ID.eq(2)
+    }.update {
+
     }
 
     val b = mapper.selectMaps(
