@@ -14,8 +14,8 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.7.0")
-    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.7.0")
+    implementation("io.github.afezeria:mybatis-plus-wrapper-ext-runtime:1.7.1")
+    ksp("io.github.afezeria:mybatis-plus-wrapper-ext-processor:1.7.1")
 }
 
 ```
@@ -27,7 +27,7 @@ dependencies {
 <dependency>
     <groupId>io.github.afezeria</groupId>
     <artifactId>mybatis-plus-wrapper-ext-runtime</artifactId>
-    <version>1.7.0</version>
+    <version>1.7.1</version>
 </dependency>
 ```
 
@@ -62,7 +62,7 @@ dependencies {
         <dependency>
             <groupId>io.github.afezeria</groupId>
             <artifactId>mybatis-plus-wrapper-ext-processor</artifactId>
-            <version>1.7.0</version>
+            <version>1.7.1</version>
         </dependency>
     </dependencies>
 </plugin>
