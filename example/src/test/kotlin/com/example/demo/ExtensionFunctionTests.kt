@@ -23,16 +23,10 @@ class ExtensionFunctionTests {
             .ID.eq(1)
             .toOne()!!.id shouldBe 1
         mapper.query()
-            .ID.eq(1)
-            .toCount() shouldBe 1
-        mapper.query()
             .toPage(Page(1, 2, true)).let { p ->
                 p.size shouldBe 2
                 p.total shouldBe 3
             }
-        mapper.queryCount {
-            NAME.likeRight("ab")
-        } shouldBe 3
         mapper.queryOne {
             ID.eq(1)
         }!!.id shouldBe 1
@@ -44,6 +38,16 @@ class ExtensionFunctionTests {
             p.size shouldBe 1
             p.total shouldBe 3
         }
+    }
+
+    @Test
+    fun count() {
+        mapper.query()
+            .ID.eq(1)
+            .toCount() shouldBe 1
+        mapper.queryCount {
+            NAME.likeRight("ab")
+        } shouldBe 3
     }
 
     @Test

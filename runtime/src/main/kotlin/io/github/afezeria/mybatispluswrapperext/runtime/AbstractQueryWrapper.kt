@@ -128,11 +128,25 @@ abstract class AbstractQueryWrapper<
     }
 
     fun toCount(): Long {
-        return mapper.selectCount(wrapper)
+        return COUNT_METHOD.invoke(mapper, wrapper).let {
+            when (it) {
+                is Int -> it.toLong()
+                is Long -> it
+                else -> throw RuntimeException()
+            }
+        }
     }
 
     fun delete(): Int {
         return mapper.delete(wrapper)
+    }
+
+    companion object {
+        private val COUNT_METHOD = BaseMapper::class.java.declaredMethods
+            .first { it.name == "selectCount" }
+            .apply {
+                isAccessible = true
+            }
     }
 
 }
