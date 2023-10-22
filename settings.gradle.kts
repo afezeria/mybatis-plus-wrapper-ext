@@ -12,5 +12,4 @@ plugins {
 rootProject.name = "mybatis-plus-wrapper-ext"
 
 include("example")
-include("runtime")
 include("processor")

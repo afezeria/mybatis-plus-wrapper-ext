@@ -20,12 +20,6 @@ class ConditionFunctionTests {
             ID.between(1, 2)
         }.size shouldBe 2
         mapper.queryList {
-            ID.between(true, 1, 2)
-        }.size shouldBe 2
-        mapper.queryList {
-            ID.between(false, 1, 2)
-        }.size shouldBe 3
-        mapper.queryList {
             ID.between(true) { 1 to 2 }
         }.size shouldBe 2
         mapper.queryList {
@@ -38,12 +32,6 @@ class ConditionFunctionTests {
         mapper.queryList {
             ID.eq(1)
         }.size shouldBe 1
-        mapper.queryList {
-            ID.eq(true, 1)
-        }.size shouldBe 1
-        mapper.queryList {
-            ID.eq(false, 1)
-        }.size shouldBe 3
         mapper.queryList {
             ID.eq(true) { 1 }
         }.size shouldBe 1
@@ -58,12 +46,6 @@ class ConditionFunctionTests {
             ID.ge(2)
         }.size shouldBe 2
         mapper.queryList {
-            ID.ge(true, 2)
-        }.size shouldBe 2
-        mapper.queryList {
-            ID.ge(false, 2)
-        }.size shouldBe 3
-        mapper.queryList {
             ID.ge(true) { 2 }
         }.size shouldBe 2
         mapper.queryList {
@@ -76,12 +58,6 @@ class ConditionFunctionTests {
         mapper.queryList {
             ID.gt(2)
         }.size shouldBe 1
-        mapper.queryList {
-            ID.gt(true, 2)
-        }.size shouldBe 1
-        mapper.queryList {
-            ID.gt(false, 2)
-        }.size shouldBe 3
         mapper.queryList {
             ID.gt(true) { 2 }
         }.size shouldBe 1
@@ -101,12 +77,6 @@ class ConditionFunctionTests {
         mapper.queryList {
             ID.`in`(listOf(null, 3, 4))
         }.size shouldBe 1
-        mapper.queryList {
-            ID.`in`(true, 2)
-        }.size shouldBe 1
-        mapper.queryList {
-            ID.`in`(false, 2)
-        }.size shouldBe 3
         mapper.queryList {
             ID.`in`(true) { listOf(2) }
         }.size shouldBe 1
@@ -147,12 +117,6 @@ class ConditionFunctionTests {
             ID.le(2)
         }.size shouldBe 2
         mapper.queryList {
-            ID.le(true, 2)
-        }.size shouldBe 2
-        mapper.queryList {
-            ID.le(false, 2)
-        }.size shouldBe 3
-        mapper.queryList {
             ID.le(true) { 2 }
         }.size shouldBe 2
         mapper.queryList {
@@ -164,12 +128,6 @@ class ConditionFunctionTests {
     fun like() {
         mapper.queryList {
             NAME.like("ab")
-        }.size shouldBe 3
-        mapper.queryList {
-            NAME.like(true, "bc")
-        }.size shouldBe 1
-        mapper.queryList {
-            NAME.like(false, "")
         }.size shouldBe 3
         mapper.queryList {
             NAME.like(true) { "aba" }
@@ -185,12 +143,6 @@ class ConditionFunctionTests {
             NAME.likeLeft("ab")
         }.size shouldBe 0
         mapper.queryList {
-            NAME.likeLeft(true, "bc")
-        }.size shouldBe 1
-        mapper.queryList {
-            NAME.likeLeft(false, "")
-        }.size shouldBe 3
-        mapper.queryList {
             NAME.likeLeft(true) { "c" }
         }.size shouldBe 1
         mapper.queryList {
@@ -202,12 +154,6 @@ class ConditionFunctionTests {
     fun likeRight() {
         mapper.queryList {
             NAME.likeRight("ab")
-        }.size shouldBe 3
-        mapper.queryList {
-            NAME.likeRight(true, "bc")
-        }.size shouldBe 0
-        mapper.queryList {
-            NAME.likeRight(false, "")
         }.size shouldBe 3
         mapper.queryList {
             NAME.likeRight(true) { "c" }
@@ -223,12 +169,6 @@ class ConditionFunctionTests {
             ID.lt(2)
         }.size shouldBe 1
         mapper.queryList {
-            ID.lt(true, 2)
-        }.size shouldBe 1
-        mapper.queryList {
-            ID.lt(false, 2)
-        }.size shouldBe 3
-        mapper.queryList {
             ID.lt(true) { 3 }
         }.size shouldBe 2
         mapper.queryList {
@@ -242,12 +182,6 @@ class ConditionFunctionTests {
             ID.ne(2)
         }.size shouldBe 2
         mapper.queryList {
-            ID.ne(true, 2)
-        }.size shouldBe 2
-        mapper.queryList {
-            ID.ne(false, 2)
-        }.size shouldBe 3
-        mapper.queryList {
             ID.ne(true) { 3 }
         }.size shouldBe 2
         mapper.queryList {
@@ -260,12 +194,6 @@ class ConditionFunctionTests {
         mapper.queryList {
             ID.notBetween(1, 2)
         }.size shouldBe 1
-        mapper.queryList {
-            ID.notBetween(true, 1, 3)
-        }.size shouldBe 0
-        mapper.queryList {
-            ID.notBetween(false, 1, 2)
-        }.size shouldBe 3
         mapper.queryList {
             ID.notBetween(true) { 1 to 2 }
         }.size shouldBe 1
@@ -286,12 +214,6 @@ class ConditionFunctionTests {
             ID.notIn(listOf(2, null, 4))
         }.size shouldBe 0
         mapper.queryList {
-            ID.notIn(true, 2)
-        }.size shouldBe 2
-        mapper.queryList {
-            ID.notIn(false, 2)
-        }.size shouldBe 3
-        mapper.queryList {
             ID.notIn(true) { listOf(4) }
         }.size shouldBe 3
         mapper.queryList {
@@ -305,12 +227,6 @@ class ConditionFunctionTests {
             NAME.notLike("ab")
         }.size shouldBe 0
         mapper.queryList {
-            NAME.notLike(true, "ef")
-        }.size shouldBe 3
-        mapper.queryList {
-            NAME.notLike(false, "")
-        }.size shouldBe 3
-        mapper.queryList {
             NAME.notLike(true) { "aba" }
         }.size shouldBe 2
         mapper.queryList {
@@ -322,12 +238,6 @@ class ConditionFunctionTests {
     fun notLikeLeft() {
         mapper.queryList {
             NAME.notLikeLeft("ab")
-        }.size shouldBe 3
-        mapper.queryList {
-            NAME.notLikeLeft(true, "bc")
-        }.size shouldBe 2
-        mapper.queryList {
-            NAME.notLikeLeft(false, "")
         }.size shouldBe 3
         mapper.queryList {
             NAME.notLikeLeft(true) { "c" }
@@ -343,12 +253,6 @@ class ConditionFunctionTests {
             NAME.notLikeRight("ab")
         }.size shouldBe 0
         mapper.queryList {
-            NAME.notLikeRight(true, "bc")
-        }.size shouldBe 3
-        mapper.queryList {
-            NAME.notLikeRight(false, "")
-        }.size shouldBe 3
-        mapper.queryList {
             NAME.notLikeRight(true) { "c" }
         }.size shouldBe 3
         mapper.queryList {
@@ -360,21 +264,21 @@ class ConditionFunctionTests {
     fun and() {
         mapper.queryList {
             NAME.likeRight("ab")
-                .and {
-                    AGE.gt(1)
-                }
+            and {
+                AGE.gt(1)
+            }
         }.size shouldBe 1
         mapper.queryList {
             NAME.likeRight("ab")
-                .and(true) {
-                    AGE.gt(1)
-                }
+            and(true) {
+                AGE.gt(1)
+            }
         }.size shouldBe 1
         mapper.queryList {
             NAME.likeRight("ab")
-                .and(false) {
-                    AGE.gt(1)
-                }
+            and(false) {
+                AGE.gt(1)
+            }
         }.size shouldBe 3
     }
 
@@ -382,37 +286,26 @@ class ConditionFunctionTests {
     fun or() {
         mapper.queryCount {
             ID.eq(1)
-                .or()
-                .AGE.eq(2)
-        } shouldBe 2
-        mapper.queryCount {
-            ID.eq(1)
             or()
             AGE.eq(2)
         } shouldBe 2
         mapper.queryCount {
             ID.eq(1)
-                .or {
-                    AGE.eq(2)
-                }
+            or {
+                AGE.eq(2)
+            }
         } shouldBe 2
         mapper.queryCount {
             ID.eq(1)
-                .or(true) {
-                    AGE.eq(2)
-                }
+            or(true) {
+                AGE.eq(2)
+            }
         } shouldBe 2
         mapper.queryCount {
             ID.eq(1)
-                .or(true) {
-                    AGE.eq(2)
-                }
-        } shouldBe 2
-        mapper.queryCount {
-            ID.eq(1)
-                .or(false) {
-                    AGE.eq(2)
-                }
+            or(false) {
+                AGE.eq(2)
+            }
         } shouldBe 1
     }
 
@@ -425,7 +318,6 @@ class ConditionFunctionTests {
         }
         mapper.updateById(1) {
             NAME.set("a")
-            AGE.set(false, 2)
             CREATE_TIME.set(true) { LocalDateTime.MIN }
         }
         mapper.selectById(1).apply {

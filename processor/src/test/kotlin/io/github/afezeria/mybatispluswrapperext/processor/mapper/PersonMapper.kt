@@ -14,25 +14,28 @@ const val NAME = "Name"
 
 @TableName("person")
 class Person {
+    /**
+     * primary key
+     */
     @TableId("id", type = IdType.AUTO)
     var id: Int? = null
 
     /**
      * person name %
      */
-    @TableField(value = NAME)
     var name: String? = null
+
+    @TableField("`age`")
     var age: Int? = null
-
-    @TableField(value = "`createTime`")
-    lateinit var createTime: LocalDateTime
-
-    val now: LocalDateTime
-        get() = LocalDateTime.now()
-    val d1 by lazy {
-        ""
+    val imgs: Array<Byte>? = null
+    var createTime: LocalDateTime? = null
+    var updateTime: LocalDateTime? = null
+    override fun toString(): String {
+        return "Person(id=$id, name=$name, age=$age, createTime=$createTime, updateTime=$updateTime)"
     }
+
 }
+
 
 @Retention()
 @Target(AnnotationTarget.CLASS)

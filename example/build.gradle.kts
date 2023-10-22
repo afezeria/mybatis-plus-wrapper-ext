@@ -7,7 +7,6 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":runtime"))
     ksp(project(":processor"))
     implementation("com.baomidou:mybatis-plus-boot-starter:3.5.3.2")
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -18,10 +17,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
 
-    kover(project(":runtime"))
-    kover(project(":processor"))
+//    kover(project(":processor"))
 }
 ksp {
     arg("dbNamingConvention", "SNAKE_CASE")
 }
-

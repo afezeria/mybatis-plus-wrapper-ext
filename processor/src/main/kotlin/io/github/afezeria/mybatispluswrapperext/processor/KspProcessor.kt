@@ -10,10 +10,6 @@ import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.ksp.toClassName
 import com.squareup.kotlinpoet.ksp.toTypeName
 import com.squareup.kotlinpoet.ksp.writeTo
-import io.github.afezeria.mybatispluswrapperext.runtime.AbstractQueryWrapper
-import io.github.afezeria.mybatispluswrapperext.runtime.AbstractUpdateWrapper
-import io.github.afezeria.mybatispluswrapperext.runtime.FieldDefinition
-import io.github.afezeria.mybatispluswrapperext.runtime.UpdateFieldDefinition
 
 
 /**
@@ -21,6 +17,8 @@ import io.github.afezeria.mybatispluswrapperext.runtime.UpdateFieldDefinition
  * @date 2021/7/17
  */
 lateinit var logger: KSPLogger
+lateinit var globalResolver: Resolver
+lateinit var globalEnvironment: SymbolProcessorEnvironment
 
 @OptIn(KspExperimental::class)
 class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcessor {
@@ -36,6 +34,7 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
 
     init {
         logger = environment.logger
+        globalEnvironment = environment
         ignoreMarkerAnnotation = environment.options[::ignoreMarkerAnnotation.name]
         dbNamingConvention = NamingConvention.valueOf(environment.options[::dbNamingConvention.name] ?: "FIELD_NAME")
     }
@@ -43,11 +42,12 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
     lateinit var BASE_MAPPER_CLASS: KSClassDeclaration
     lateinit var BASE_MAPPER_TYPE: KSType
 
-    lateinit var resolver: Resolver
     val processedMapperSet = mutableSetOf<String>()
 
+    val packageLevelApiGenerateHandler = PackageLevelApiGenerateHandler()
+
     fun init(resolver: Resolver) {
-        this.resolver = resolver
+        globalResolver = resolver
         BASE_MAPPER_CLASS = resolver.getClassDeclarationByName(BASE_MAPPER_CLASS_NAME.canonicalName)!!
         BASE_MAPPER_TYPE = BASE_MAPPER_CLASS.asStarProjectedType()
     }
@@ -92,22 +92,35 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 return
             }
 
+        packageLevelApiGenerateHandler.generate(mapper.packageName.asString())
+
+
         val mapperClassName = mapper.toClassName()
         val entityClassName = entityClass.toClassName()
         val fileSpecBuilder =
             FileSpec.builder(mapper.packageName.asString(), mapper.simpleName.asString() + "Extensions")
-        val queryExtensionClassName =
-            addMapperWrapperClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, false)
-        val updateExtensionClassName =
-            addMapperWrapperClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, true)
+        val tableDefInterface = addTableDefInterface(fileSpecBuilder, mapperClassName, entityClassName, entityClass)
+        val tableDefClass =
+            addTableDefClass(fileSpecBuilder, mapperClassName, entityClassName, entityClass, tableDefInterface)
+        val whereScopeClass =
+            addWhereScopeClass(fileSpecBuilder, mapperClassName, entityClassName, tableDefInterface, tableDefClass)
+        val updateScopeClass = addUpdateScopeClass(
+            fileSpecBuilder,
+            mapperClassName,
+            entityClassName,
+            tableDefInterface,
+            tableDefClass,
+            whereScopeClass
+        )
 
         addExtensionMethod(
             fileSpecBuilder,
             mapperClassName,
-            queryExtensionClassName,
-            updateExtensionClassName,
             entityClassName,
-            entityClass
+            entityClass,
+            tableDefInterface,
+            whereScopeClass,
+            updateScopeClass
         )
 
         val fileSpec = fileSpecBuilder.build()
@@ -117,70 +130,403 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
         )
     }
 
+    /**
+     * ```
+     * interface PersonTableDef {
+     *     val ID: FieldDef<Int, Int?>
+     *     val NAME: FieldDef<String, String?>
+     *     val AGE: FieldDef<Int, Int?>
+     * }
+     * ```
+     * @param fileSpecBuilder Builder
+     * @param mapperClassName ClassName
+     * @param entityClassName ClassName
+     * @param entityClass KSClassDeclaration
+     * @return ClassName
+     */
+    private fun addTableDefInterface(
+        fileSpecBuilder: FileSpec.Builder,
+        mapperClassName: ClassName,
+        entityClassName: ClassName,
+        entityClass: KSClassDeclaration,
+    ): ClassName {
+        val tableDefInterfaceName = ClassName(mapperClassName.packageName, "${entityClassName.simpleName}TableDef")
+
+        val interfaceBuilder = TypeSpec.interfaceBuilder(tableDefInterfaceName)
+
+        val props = entityClass.getAllProperties()
+            .filter { it.hasBackingField && !it.isDelegated() }
+            .toList()
+
+        val fieldDefClassName = packageLevelApiGenerateHandler.currentFieldDefClassName
+
+        for (property in props) {
+            val tableField = property.findAnnotation(TABLE_FIELD_QUALIFIED_NAME)
+            if (tableField?.getValue<Boolean>("exist") == false) {
+                continue
+            }
+
+            val doc = if (property.docString.isNullOrBlank()) {
+                ""
+            } else {
+                property.docString!!.trim() + "\n\n"
+            } + "@see ${property.qualifiedName?.asString()}"
+            interfaceBuilder.addProperty(
+                PropertySpec.builder(
+                    NamingConvention.CONSTANT_CASE.convert(property.simpleName.asString()),
+                    fieldDefClassName.parameterizedBy(
+                        property.type.resolve().makeNotNullable().toTypeName(),
+                        property.type.resolve().toTypeName()
+                    )
+                ).addKdoc("%L", doc)
+                    .build()
+            )
+        }
+        fileSpecBuilder.addType(interfaceBuilder.build())
+        return tableDefInterfaceName
+    }
+
+    /**
+     * ```
+     * object PersonTableDefImpl : PersonTableDef {
+     *     override val ID: FieldDef<Int, Int?> = FieldDef<Int, Int?>("id")
+     *     override val NAME: FieldDef<String, String?> = FieldDef<String, String?>("name")
+     *     override val AGE: FieldDef<Int, Int?> = FieldDef<Int, Int?>("age")
+     * }
+     * ```
+     */
+    private fun addTableDefClass(
+        fileSpecBuilder: FileSpec.Builder,
+        mapperClassName: ClassName,
+        entityClassName: ClassName,
+        entityClass: KSClassDeclaration,
+        tableDefInterfaceClassName: ClassName,
+    ): ClassName {
+        val tableDefObjectName = ClassName(mapperClassName.packageName, "${entityClassName.simpleName}TableDefImpl")
+
+        val classBuilder = TypeSpec.objectBuilder(tableDefObjectName)
+            .addSuperinterface(tableDefInterfaceClassName)
+
+        val props = entityClass.getAllProperties()
+            .filter { it.hasBackingField && !it.isDelegated() }
+            .toList()
+
+        val fieldDefClassName = packageLevelApiGenerateHandler.currentFieldDefClassName
+
+
+        for (property in props) {
+            val tableField = property.findAnnotation(TABLE_FIELD_QUALIFIED_NAME)
+            val tableId = property.findAnnotation(TABLE_ID_QUALIFIED_NAME)
+            if (tableField?.getValue<Boolean>("exist") == false) {
+                continue
+            }
+            val dbFieldName: String = tableId?.getValue("value")
+                ?: tableField?.getValue("value")
+                ?: dbNamingConvention.convert(property.simpleName.asString())
+
+            classBuilder.addProperty(
+                PropertySpec.builder(
+                    NamingConvention.CONSTANT_CASE.convert(property.simpleName.asString()),
+                    fieldDefClassName.parameterizedBy(
+                        property.type.resolve().makeNotNullable().toTypeName(),
+                        property.type.resolve().toTypeName()
+                    )
+                ).initializer(
+                    "%T(%S)",
+                    fieldDefClassName,
+                    dbFieldName
+                ).addModifiers(KModifier.OVERRIDE)
+                    .build()
+            )
+        }
+        fileSpecBuilder.addType(classBuilder.build())
+        return tableDefObjectName
+    }
+
+    /**
+     * ```
+     * class PersonWhereScope(mapper: BaseMapper<Person>) :
+     * WhereScope<PersonWhereScope, PersonTableDef, Person>(mapper, PersonTableDefImpl),
+     * PersonTableDef by PersonTableDefImpl
+     * ```
+     */
+    private fun addWhereScopeClass(
+        fileSpecBuilder: FileSpec.Builder,
+        mapperClassName: ClassName,
+        entityClassName: ClassName,
+        tableDefInterfaceClassName: ClassName,
+        tableDefObjectClassName: ClassName,
+    ): ClassName {
+        val whereScopeClassName = packageLevelApiGenerateHandler.currentWhereScopeClassName
+
+        val entityWhereScopeName = ClassName(mapperClassName.packageName, "${entityClassName.simpleName}WhereScope")
+        val entityWhereScopeClass = TypeSpec.classBuilder(entityWhereScopeName)
+            .superclass(
+                whereScopeClassName.parameterizedBy(
+                    entityWhereScopeName,
+                    tableDefInterfaceClassName,
+                    entityClassName
+                )
+            )
+            .addSuperclassConstructorParameter("mapper, %T", tableDefObjectClassName)
+            .addSuperinterface(tableDefInterfaceClassName, delegate = CodeBlock.of("%T", tableDefObjectClassName))
+            .primaryConstructor(
+                FunSpec.constructorBuilder()
+                    .addParameter("mapper", BASE_MAPPER_CLASS_NAME.parameterizedBy(entityClassName))
+                    .build()
+            ).build()
+        fileSpecBuilder.addType(entityWhereScopeClass)
+        return entityWhereScopeName
+    }
+
+    /**
+     * ```
+     * class PersonUpdateScope(finalWhereScope: FinalWhereScope<PersonWhereScope, PersonTableDef, Person>) :
+     * UpdateScope<PersonUpdateScope, PersonTableDef, Person>(
+     *     finalWhereScope.getUpdateWrapper(),
+     *     PersonTableDefImpl,
+     * ),
+     * PersonTableDef by PersonTableDefImpl
+     * ```
+     */
+    private fun addUpdateScopeClass(
+        fileSpecBuilder: FileSpec.Builder,
+        mapperClassName: ClassName,
+        entityClassName: ClassName,
+        tableDefInterfaceClassName: ClassName,
+        tableDefObjectClassName: ClassName,
+        tableWhereScopeClassName: ClassName,
+    ): ClassName {
+        val finalWhereScopeClassName = packageLevelApiGenerateHandler.currentFinalWhereScopeClassName
+        val updateScopeClassName = packageLevelApiGenerateHandler.currentUpdateScopeClassName
+
+        val tableUpdateScopeName = ClassName(mapperClassName.packageName, "${entityClassName.simpleName}UpdateScope")
+        val tableUpdateScopeClass = TypeSpec.classBuilder(tableUpdateScopeName)
+            .superclass(
+                updateScopeClassName.parameterizedBy(
+                    tableUpdateScopeName,
+                    tableDefInterfaceClassName,
+                    entityClassName
+                )
+            )
+            .addSuperclassConstructorParameter(
+                "scope.getUpdateWrapper(), %T",
+                tableDefObjectClassName,
+            )
+            .addSuperinterface(tableDefInterfaceClassName, delegate = CodeBlock.of("%T", tableDefObjectClassName))
+            .primaryConstructor(
+                FunSpec.constructorBuilder()
+                    .addParameter(
+                        "scope",
+                        finalWhereScopeClassName.parameterizedBy(
+                            tableWhereScopeClassName,
+                            tableDefInterfaceClassName,
+                            entityClassName
+                        )
+                    )
+                    .build()
+            ).build()
+        fileSpecBuilder.addType(tableUpdateScopeClass)
+        return tableUpdateScopeName
+    }
+
     fun addExtensionMethod(
         fileSpecBuilder: FileSpec.Builder,
         mapperClassName: ClassName,
-        queryExtensionClassName: ClassName,
-        updateExtensionClassName: ClassName,
         entityClassName: ClassName,
         entityClass: KSClassDeclaration,
+        tableDefInterfaceClassName: ClassName,
+        tableWhereScopeClassName: ClassName,
+        tableUpdateScopeClassName: ClassName,
     ) {
+        val finalWhereScopeClassName = packageLevelApiGenerateHandler.currentFinalWhereScopeClassName
+        val fieldDefClassName = packageLevelApiGenerateHandler.currentFieldDefClassName
 
         //query==========
+        /**
+         * ```
+         * fun PersonMapper.where(
+         *     fn: PersonWhereScope.() -> Unit
+         * ): FinalWhereScope<PersonWhereScope, PersonTableDef, Person> {
+         *     val scope = PersonWhereScope(this)
+         *     scope.invoke(fn)
+         *     return FinalWhereScope(scope)
+         * }
+         * ```
+         */
         fileSpecBuilder.addFunction(
-            FunSpec.builder("query")
+            FunSpec.builder("where")
                 .receiver(mapperClassName)
-                .returns(queryExtensionClassName)
-                .addCode(
-                    """
-                    val w = %T(this)
-                    return w
-                """.trimIndent(), queryExtensionClassName
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
+                .returns(
+                    finalWhereScopeClassName.parameterizedBy(
+                        tableWhereScopeClassName,
+                        tableDefInterfaceClassName,
+                        entityClassName
+                    )
                 )
-                .build(),
-        )
-
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("queryList")
-                .receiver(mapperClassName)
-                .returns(List::class.asClassName().parameterizedBy(entityClassName))
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toList()
-                """.trimIndent(), queryExtensionClassName
+                    val s = %T(this)
+                    return s(fn)
+                """.trimIndent(), tableWhereScopeClassName
                 )
                 .build()
         )
 
+        /**
+         * ```
+         * fun PersonMapper.queryList(
+         *     fn: PersonWhereScope.() -> Unit
+         * ): List<Person> {
+         *     val scope = PersonWhereScope(this)
+         *     scope.invoke(fn)
+         *     return FinalWhereScope(scope).toList()
+         * }
+         * ```
+         */
         fileSpecBuilder.addFunction(
-            FunSpec.builder("querySingleField")
+            FunSpec.builder("queryList")
+                .receiver(mapperClassName)
+                .returns(LIST_CLASS_NAME.parameterizedBy(entityClassName))
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toList()
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
+                )
+                .build()
+        )
+
+        /**
+         * ```
+         * fun PersonMapper.queryOne(
+         *     fn: PersonWhereScope.() -> Unit
+         * ): Person? {
+         *     val scope = PersonWhereScope(this)
+         *     scope.invoke(fn)
+         *     return FinalWhereScope(scope).toOne()
+         * }
+         * ```
+         */
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("queryOne")
+                .receiver(mapperClassName)
+                .returns(entityClassName.copy(nullable = true))
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toOne()
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
+                )
+                .build()
+        )
+
+        /**
+         * fun <P : IPage<Person>> PersonMapper.queryPage(
+         *     page: P,
+         *     fn: PersonWhereScope.() -> Unit
+         * ): P {
+         *     val scope = PersonWhereScope(this)
+         *     scope(fn)
+         *     return FinalWhereScope(scope).toPage(page)
+         * }
+         */
+        val pageType = TypeVariableName("P", I_PAGE_CLASS_NAME.parameterizedBy(entityClassName))
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("queryPage")
+                .addTypeVariable(pageType)
+                .receiver(mapperClassName)
+                .returns(pageType)
+                .addParameter("page", pageType)
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toPage(page)
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
+                )
+                .build()
+        )
+
+        /**
+         * fun PersonMapper.queryCount(
+         *     fn: PersonWhereScope.() -> Unit
+         * ): Long {
+         *     val scope = PersonWhereScope(this)
+         *     scope(fn)
+         *     return FinalWhereScope(scope).toCount()
+         * }
+         */
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("queryCount")
+                .receiver(mapperClassName)
+                .returns(LONG_CLASS_NAME)
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
+                .addCode(
+                    """
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toCount()
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
+                )
+                .build()
+        )
+
+        /**
+         * fun <F1> PersonMapper.querySingleFieldList(
+         *     columnsFn: PersonTableDef.() -> FieldDef<*, F1>,
+         *     fn: PersonWhereScope.() -> Unit
+         * ): List<F1> {
+         *     val scope = PersonWhereScope(this)
+         *     scope.invoke(fn)
+         *     return FinalWhereScope(scope).toSingleFieldList(columnsFn)
+         * }
+         *
+         */
+        fileSpecBuilder.addFunction(
+            FunSpec.builder("querySingleFieldList")
                 .addTypeVariable(TYPE_VAR_F1)
                 .receiver(mapperClassName)
                 .returns(List::class.asClassName().parameterizedBy(TYPE_VAR_F1))
                 .addParameter(
-                    "columnFn",
+                    "columnsFn",
                     LambdaTypeName.get(
-                        queryExtensionClassName,
+                        tableDefInterfaceClassName,
                         emptyList(),
-                        FieldDefinition::class.asTypeName().parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F1)
+                        fieldDefClassName.parameterizedBy(STAR, TYPE_VAR_F1)
                     )
                 )
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toSingleFieldList(columnFn)
-                """.trimIndent(), queryExtensionClassName
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toSingleFieldList(columnsFn)
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
                 )
                 .build()
         )
 
+        /**
+         * fun <F1, F2> PersonMapper.queryPairList(
+         *     columnsFn: PersonTableDef.() -> Pair<FieldDef<*, F1>, FieldDef<*, F2>>,
+         *     fn: PersonWhereScope.() -> Unit
+         * ): List<Pair<F1, F2>> {
+         *     val scope = PersonWhereScope(this)
+         *     scope(fn)
+         *     return FinalWhereScope(scope).toPairList(columnsFn)
+         * }
+         *
+         *
+         */
         fileSpecBuilder.addFunction(
-            FunSpec.builder("queryPair")
+            FunSpec.builder("queryPairList")
                 .addTypeVariable(TYPE_VAR_F1)
                 .addTypeVariable(TYPE_VAR_F2)
                 .receiver(mapperClassName)
@@ -188,27 +534,37 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter(
                     "columnsFn",
                     LambdaTypeName.get(
-                        queryExtensionClassName,
+                        tableDefInterfaceClassName,
                         emptyList(),
                         PAIR_CLASS_NAME.parameterizedBy(
-                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F1),
-                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F2),
+                            fieldDefClassName.parameterizedBy(STAR, TYPE_VAR_F1),
+                            fieldDefClassName.parameterizedBy(STAR, TYPE_VAR_F2),
                         )
                     )
                 )
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toPairList(columnsFn)
-                """.trimIndent(), queryExtensionClassName
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toPairList(columnsFn)
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
                 )
                 .build()
         )
 
+        /**
+         * fun <F1, F2, F3> PersonMapper.queryTripleList(
+         *     columnsFn: PersonTableDef.() -> Triple<FieldDef<*, F1>, FieldDef<*, F2>, FieldDef<*, F3>>,
+         *     fn: PersonWhereScope.() -> Unit
+         * ): List<Triple<F1, F2, F3>> {
+         *     val scope = PersonWhereScope(this)
+         *     scope(fn)
+         *     return FinalWhereScope(scope).toTripleList(columnsFn)
+         * }
+         */
         fileSpecBuilder.addFunction(
-            FunSpec.builder("queryTriple")
+            FunSpec.builder("queryTripleList")
                 .addTypeVariable(TYPE_VAR_F1)
                 .addTypeVariable(TYPE_VAR_F2)
                 .addTypeVariable(TYPE_VAR_F3)
@@ -225,173 +581,80 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 .addParameter(
                     "columnsFn",
                     LambdaTypeName.get(
-                        queryExtensionClassName,
+                        tableDefInterfaceClassName,
                         emptyList(),
                         TRIPLE_CLASS_NAME.parameterizedBy(
-                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F1),
-                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F2),
-                            FIELD_DEFINITION_CLASS_NAME.parameterizedBy(queryExtensionClassName, STAR, TYPE_VAR_F3),
+                            fieldDefClassName.parameterizedBy(STAR, TYPE_VAR_F1),
+                            fieldDefClassName.parameterizedBy(STAR, TYPE_VAR_F2),
+                            fieldDefClassName.parameterizedBy(STAR, TYPE_VAR_F3),
                         )
                     )
                 )
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toTripleList(columnsFn)
-                """.trimIndent(), queryExtensionClassName
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toTripleList(columnsFn)
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
+
                 )
                 .build()
         )
 
-        val pageType = TypeVariableName("P", I_PAGE_CLASS_NAME.parameterizedBy(entityClassName))
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("queryPage")
-                .addTypeVariable(pageType)
-                .receiver(mapperClassName)
-                .returns(pageType)
-                .addParameter("page", pageType)
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
-                .addCode(
-                    """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toPage(page)
-                """.trimIndent(), queryExtensionClassName
-                )
-                .build()
-        )
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("queryOne")
-                .receiver(mapperClassName)
-                .returns(entityClassName.copy(nullable = true))
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
-                .addCode(
-                    """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toOne()
-                """.trimIndent(), queryExtensionClassName
-                )
-                .build()
-        )
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("queryCount")
-                .receiver(mapperClassName)
-                .returns(LONG_CLASS_NAME)
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
-                .addCode(
-                    """
-                    val w = %T(this)
-                    fn(w)
-                    return w.toCount()
-                """.trimIndent(), queryExtensionClassName
-                )
-                .build()
-        )
 
         //delete==========
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("delete")
-                .receiver(mapperClassName)
-                .returns(queryExtensionClassName)
-                .addCode(
-                    """
-                    val w = %T(this)
-                    return w
-                """.trimIndent(), queryExtensionClassName
-                )
-                .build(),
-        )
-
+        /**
+         * fun PersonMapper.delete(
+         *     fn: PersonWhereScope.() -> Unit
+         * ): Int {
+         *     val scope = PersonWhereScope(this)
+         *     scope.invoke(fn)
+         *     return FinalWhereScope(scope).toDelete()
+         * }
+         *
+         */
         fileSpecBuilder.addFunction(
             FunSpec.builder("delete")
                 .receiver(mapperClassName)
                 .returns(INT_CLASS_NAME)
-                .addParameter("fn", LambdaTypeName.get(queryExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addParameter("fn", LambdaTypeName.get(tableWhereScopeClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    val w = %T(this)
-                    fn(w)
-                    return w.delete()
-                """.trimIndent(), queryExtensionClassName
+                    val s = %T(this)
+                    s(fn)
+                    return %T(s).toDelete()
+                """.trimIndent(), tableWhereScopeClassName, finalWhereScopeClassName
                 )
                 .build()
         )
 
         //update==========
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("update")
-                .receiver(mapperClassName)
-                .returns(updateExtensionClassName)
-                .addCode(
-                    """
-                    val w = %T(this)
-                    return w
-                """.trimIndent(), updateExtensionClassName
-                )
-                .build(),
-        )
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("update")
-                .receiver(mapperClassName)
-                .returns(INT_CLASS_NAME)
-                .addParameter("fn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
-                .addCode(
-                    """
-                    val w = %T(this)
-                    fn(w)
-                    return w.update()
-                """.trimIndent(), updateExtensionClassName
-                )
-                .build()
-        )
-//        fun PersonMapper.where(whereFn: PersonMapperUpdateWrapper.() -> Unit): Pair<PersonMapper, PersonMapperUpdateWrapper.() -> Unit> {
-//            return this to whereFn
-//        }
-        fileSpecBuilder.addFunction(
-            FunSpec.builder("where")
-                .receiver(mapperClassName)
-                .returns(
-                    PAIR_CLASS_NAME.parameterizedBy(
-                        mapperClassName,
-                        LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME)
-                    )
-                )
-                .addParameter("whereFn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
-                .addCode(
-                    """
-                    val p = this to whereFn
-                    return p
-                """.trimIndent()
-                )
-                .build()
-        )
-//
-//        fun Pair<PersonMapper, PersonMapperUpdateWrapper.() -> Unit>.update(setFn: PersonMapperUpdateWrapper.() -> Unit): Int {
-//            val w = PersonMapperUpdateWrapper(first)
-//            second(w)
-//            setFn(w)
-//            return w.update()
-//        }
+        /**
+         * fun FinalWhereScope<PersonWhereScope, PersonTableDef, Person>.update(fn: PersonUpdateScope.() -> Unit): Int {
+         *     val w = PersonUpdateScope(this)
+         *     w.invoke(fn)
+         *     return whereScope.mapper.update(null, w.wrapper)
+         * }
+         *
+         */
         fileSpecBuilder.addFunction(
             FunSpec.builder("update")
                 .receiver(
-                    PAIR_CLASS_NAME.parameterizedBy(
-                        mapperClassName,
-                        LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME)
+                    finalWhereScopeClassName.parameterizedBy(
+                        tableWhereScopeClassName,
+                        tableDefInterfaceClassName,
+                        entityClassName
                     )
                 )
                 .returns(INT_CLASS_NAME)
-                .addParameter("setFn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                .addParameter("fn", LambdaTypeName.get(tableUpdateScopeClassName, emptyList(), UNIT_CLASS_NAME))
                 .addCode(
                     """
-                    val w = %T(first)
-                    second(w)
-                    setFn(w)
-                    return w.update()
-                """.trimIndent(), updateExtensionClassName
+                    val s = %T(this)
+                    s(fn)
+                    return whereScope.mapper.update(null, s.wrapper)
+                """.trimIndent(), tableUpdateScopeClassName
                 )
                 .build()
         )
@@ -402,108 +665,39 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                         && !it.isDelegated()
                         && it.annotations.any { it.annotationType.resolve().declaration.qualifiedName?.asString() == TABLE_ID_QUALIFIED_NAME }
             }?.let { idProp ->
+                /**
+                 * fun PersonMapper.updateById(
+                 *     id: Int,
+                 *     fn: PersonUpdateScope.() -> Unit
+                 * ): Int {
+                 *     val scope = PersonWhereScope(this)
+                 *     return scope {
+                 *         ID.eq(id)
+                 *     }.update(fn)
+                 * }
+                 *
+                 */
                 val idSimpleName = idProp.simpleName.asString()
                 fileSpecBuilder.addFunction(
                     FunSpec.builder("updateById")
                         .receiver(mapperClassName)
                         .returns(INT_CLASS_NAME)
                         .addParameter(idSimpleName, idProp.type.resolve().makeNotNullable().toClassName())
-                        .addParameter("fn", LambdaTypeName.get(updateExtensionClassName, emptyList(), UNIT_CLASS_NAME))
+                        .addParameter("fn", LambdaTypeName.get(tableUpdateScopeClassName, emptyList(), UNIT_CLASS_NAME))
                         .addCode(
                             """
-                            val wrapper = %T(this).apply(fn)
-                                .%N.eq(%N)
-                                .wrapper
-                            return this.update(null, wrapper)
+                            val s = %T(this)
+                            return s {
+                                %N.eq(%N)
+                            }.update(fn)
                         """.trimIndent(),
-                            updateExtensionClassName,
+                            tableWhereScopeClassName,
                             NamingConvention.CONSTANT_CASE.convert(idSimpleName),
                             idSimpleName,
                         )
                         .build()
                 )
             }
-    }
-
-
-    private fun addMapperWrapperClass(
-        fileSpecBuilder: FileSpec.Builder,
-        mapperClassName: ClassName,
-        entityClassName: ClassName,
-        entityClass: KSClassDeclaration,
-        isUpdateExtension: Boolean,
-    ): ClassName {
-        val extensionClassName: ClassName
-        val abstractMapperExtension: ClassName
-        val fieldDefinitionClassName: ClassName
-        if (isUpdateExtension) {
-            extensionClassName = ClassName(
-                mapperClassName.packageName,
-                "${mapperClassName.simpleName}UpdateWrapper"
-            )
-            abstractMapperExtension = ABSTRACT_UPDATE_WRAPPER_CLASS_NAME
-            fieldDefinitionClassName = UPDATE_FIELD_DEFINITION_CLASS_NAME
-        } else {
-            extensionClassName = ClassName(
-                mapperClassName.packageName,
-                "${mapperClassName.simpleName}QueryWrapper"
-            )
-            abstractMapperExtension = ABSTRACT_QUERY_WRAPPER_CLASS_NAME
-            fieldDefinitionClassName = FIELD_DEFINITION_CLASS_NAME
-        }
-
-        val classBuilder = TypeSpec.classBuilder(extensionClassName)
-            .primaryConstructor(
-                FunSpec.constructorBuilder()
-                    .addParameter(EXTENSION_CONSTRUCTOR_PARAMETER_NAME, mapperClassName)
-                    .build()
-            )
-            .superclass(
-                abstractMapperExtension.parameterizedBy(
-                    extensionClassName,
-                    mapperClassName,
-                    entityClassName,
-                )
-            )
-            .addSuperclassConstructorParameter(EXTENSION_CONSTRUCTOR_PARAMETER_NAME)
-
-        val props = entityClass.getAllProperties()
-            .filter { it.hasBackingField && !it.isDelegated() }
-            .toList()
-
-        for (property in props) {
-            val tableField = property.findAnnotation(TABLE_FIELD_QUALIFIED_NAME)
-            val tableId = property.findAnnotation(TABLE_ID_QUALIFIED_NAME)
-            if (tableField?.getValue<Boolean>("exist") == false) {
-                continue
-            }
-            val dbFieldName: String = tableId?.getValue("value")
-                ?: tableField?.getValue("value")
-                ?: dbNamingConvention.convert(property.simpleName.asString())
-
-            val doc = if (property.docString.isNullOrBlank()) {
-                ""
-            } else {
-                property.docString!!.trim() + "\n\n"
-            } + "@see ${property.qualifiedName?.asString()}"
-            classBuilder.addProperty(
-                PropertySpec.builder(
-                    NamingConvention.CONSTANT_CASE.convert(property.simpleName.asString()),
-                    fieldDefinitionClassName.parameterizedBy(
-                        extensionClassName,
-                        property.type.resolve().makeNotNullable().toTypeName(),
-                        property.type.resolve().toTypeName()
-                    )
-                ).addKdoc("%L", doc)
-                    .initializer(
-                        "%T(%S, this)",
-                        fieldDefinitionClassName,
-                        dbFieldName
-                    ).build()
-            )
-        }
-        fileSpecBuilder.addType(classBuilder.build())
-        return extensionClassName
     }
 
     private fun findEntityType(
@@ -519,8 +713,8 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                 if (arg.type!!.resolve().declaration is KSClassDeclaration) {
                     arg
                 } else {
-                    resolver.getTypeArgument(
-                        resolver.createKSTypeReferenceFromKSType(
+                    globalResolver.getTypeArgument(
+                        globalResolver.createKSTypeReferenceFromKSType(
                             typeArgMap[arg.type!!.resolve().declaration.simpleName.asString()]!!
                         ), Variance.INVARIANT
                     )
@@ -561,36 +755,4 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
             return KspProcessor(environment)
         }
     }
-
-    companion object {
-        val UNIT_CLASS_NAME = Unit::class.asClassName()
-        val INT_CLASS_NAME = Int::class.asClassName()
-        val LONG_CLASS_NAME = Long::class.asClassName()
-        val LIST_CLASS_NAME = List::class.asClassName()
-        val PAIR_CLASS_NAME = Pair::class.asClassName()
-        val TRIPLE_CLASS_NAME = Triple::class.asClassName()
-
-        val FIELD_DEFINITION_CLASS_NAME = FieldDefinition::class.asClassName()
-        val UPDATE_FIELD_DEFINITION_CLASS_NAME = UpdateFieldDefinition::class.asClassName()
-        val ABSTRACT_QUERY_WRAPPER_CLASS_NAME = AbstractQueryWrapper::class.asClassName()
-        val ABSTRACT_UPDATE_WRAPPER_CLASS_NAME = AbstractUpdateWrapper::class.asClassName()
-
-        val TYPE_VAR_F1 = TypeVariableName("F1")
-        val TYPE_VAR_F2 = TypeVariableName("F2")
-        val TYPE_VAR_F3 = TypeVariableName("F3")
-
-        const val TABLE_FIELD_QUALIFIED_NAME = "com.baomidou.mybatisplus.annotation.TableField"
-        const val TABLE_ID_QUALIFIED_NAME = "com.baomidou.mybatisplus.annotation.TableId"
-        val BASE_MAPPER_CLASS_NAME = ClassName("com.baomidou.mybatisplus.core.mapper", "BaseMapper")
-        val I_PAGE_CLASS_NAME = ClassName("com.baomidou.mybatisplus.core.metadata", "IPage")
-        const val EXTENSION_CONSTRUCTOR_PARAMETER_NAME = "mapper"
-
-    }
-}
-
-fun main() {
-    val a = List::class.asClassName()
-    val b = a.parameterizedBy(Int::class.asTypeName())
-    println(a)
-    println(b)
 }

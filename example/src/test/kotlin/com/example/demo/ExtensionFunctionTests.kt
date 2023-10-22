@@ -16,17 +16,23 @@ class ExtensionFunctionTests {
 
     @Test
     fun query() {
-        mapper.query()
-            .ID.eq(1)
-            .toList().size shouldBe 1
-        mapper.query()
-            .ID.eq(1)
-            .toOne()!!.id shouldBe 1
-        mapper.query()
-            .toPage(Page(1, 2, true)).let { p ->
-                p.size shouldBe 2
-                p.total shouldBe 3
-            }
+        mapper.where {
+            ID.eq(1)
+        }.toList().size shouldBe 1
+        mapper.where {
+            ID.eq(1)
+        }.toOne()!!.id shouldBe 1
+        mapper.where {
+            ID.eq(1)
+        }.toCount() shouldBe 1
+        mapper.where {
+        }.toPage(Page(1, 2, true)).let { p ->
+            p.size shouldBe 2
+            p.total shouldBe 3
+        }
+        mapper.queryCount {
+            NAME.likeRight("ab")
+        } shouldBe 3
         mapper.queryOne {
             ID.eq(1)
         }!!.id shouldBe 1
@@ -41,29 +47,19 @@ class ExtensionFunctionTests {
     }
 
     @Test
-    fun count() {
-        mapper.query()
-            .ID.eq(1)
-            .toCount() shouldBe 1
-        mapper.queryCount {
-            NAME.likeRight("ab")
-        } shouldBe 3
-    }
-
-    @Test
     fun querySingleField() {
-        mapper.querySingleField({ AGE }) {} shouldContainExactly listOf(1, 2, null)
-        mapper.querySingleField({ ID.markNotNull }) {} shouldContainExactly listOf(1, 2, 3)
+        mapper.querySingleFieldList({ AGE }) {} shouldContainExactly listOf(1, 2, null)
+        mapper.querySingleFieldList({ ID.markNotNull }) {} shouldContainExactly listOf(1, 2, 3)
     }
 
     @Test
     fun queryPair() {
-        mapper.queryPair({ NAME to AGE }) {} shouldContainExactly listOf("aba" to 1, "abb" to 2, "abc" to null)
+        mapper.queryPairList({ NAME to AGE }) {} shouldContainExactly listOf("aba" to 1, "abb" to 2, "abc" to null)
     }
 
     @Test
     fun queryTriple() {
-        mapper.queryTriple({ Triple(ID, NAME, AGE) }) {} shouldContainExactly listOf(
+        mapper.queryTripleList({ Triple(ID, NAME, AGE) }) {} shouldContainExactly listOf(
             Triple(1, "aba", 1),
             Triple(2, "abb", 2),
             Triple(3, "abc", null)
@@ -72,52 +68,27 @@ class ExtensionFunctionTests {
 
     @Test
     fun delete() {
-        mapper.query().ID.eq(1).toCount() shouldBe 1
-        mapper.delete()
-            .ID.eq(1)
-            .delete() shouldBe 1
-        mapper.query().ID.eq(1).toCount() shouldBe 0
-
-        mapper.query().ID.eq(2).toCount() shouldBe 1
+        mapper.queryCount { ID.eq(2) } shouldBe 1
         mapper.delete {
             ID.eq(2)
         }
-        mapper.query().ID.eq(2).toCount() shouldBe 0
+        mapper.queryCount { ID.eq(2) } shouldBe 0
     }
 
     @Test
     fun update() {
-        mapper.query().ID.eq(1).toOne()!!.name shouldBe "aba"
+        mapper.queryOne { ID.eq(1) }!!.name shouldBe "aba"
         mapper.updateById(1) {
             NAME.set("bcd")
         }
-        mapper.query().ID.eq(1).toOne()!!.name shouldBe "bcd"
+        mapper.queryOne { ID.eq(1) }!!.name shouldBe "bcd"
 
-        mapper.query().ID.eq(2).toOne()!!.name shouldBe "abb"
-        mapper.update()
-            .NAME.set("bcd")
-            .ID.eq(2)
-            .update()
-        mapper.query().ID.eq(2).toOne()!!.name shouldBe "bcd"
-
-        mapper.query().ID.eq(3).toOne()!!.name shouldBe "abc"
-        mapper.update {
-            NAME.set("bcd")
-            ID.eq(3)
-        }
-        mapper.query().ID.eq(3).toOne()!!.name shouldBe "bcd"
-    }
-
-    @Test
-    fun updateWithWhere() {
-        mapper.query().ID.eq(1).toOne()!!.name shouldBe "aba"
+        mapper.queryOne { ID.eq(3) }!!.name shouldBe "abc"
         mapper.where {
-            ID.eq(1)
+            ID.eq(3)
         }.update {
             NAME.set("bcd")
         }
-        mapper.query().ID.eq(1).toOne()!!.name shouldBe "bcd"
+        mapper.queryOne { ID.eq(3) }!!.name shouldBe "bcd"
     }
-
-
 }
