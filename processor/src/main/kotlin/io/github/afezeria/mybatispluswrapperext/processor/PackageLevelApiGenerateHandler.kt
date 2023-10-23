@@ -24,6 +24,7 @@ class PackageLevelApiGenerateHandler {
         if (packageName in generatedPackageLevelApiList) {
             return
         }
+        generatedPackageLevelApiList += packageName
         val code = """
 package $packageName
 
@@ -304,13 +305,13 @@ abstract class UpdateScope<S : UpdateScope<S, TD, T>, TD, T>(
             .firstOrNull { it.simpleName.asString() == "exists" }
         val existsMethodBody = if (existsMethod != null) {
             hasExistsMethod = true
-            ""
-        } else {
             """
     fun exists(): Boolean {
         return whereScope.mapper.exists(getQueryWrapper())
     }
 """.trimIndent()
+        } else {
+            ""
         }
 
         @Language("kotlin")
