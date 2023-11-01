@@ -329,7 +329,7 @@ class FinalWhereScope<S : WhereScope<S, TD, T>, TD, T>(
         return whereScope.mapper.selectList(getQueryWrapper())
     }
 
-    fun toOne(): T {
+    fun toOne(): T? {
         return whereScope.mapper.selectOne(getQueryWrapper())
     }
 
