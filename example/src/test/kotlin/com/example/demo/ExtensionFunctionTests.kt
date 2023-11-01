@@ -91,4 +91,18 @@ class ExtensionFunctionTests {
         }
         mapper.queryOne { ID.eq(3) }!!.name shouldBe "bcd"
     }
+
+    @Test
+    fun insertOrUpdate() {
+        mapper.queryCount{ NAME.eq("aba")} shouldBe 1
+        mapper.insertOrUpdate(Person().apply {
+            name = "aba"
+        })
+        mapper.queryCount{ NAME.eq("aba")} shouldBe 2
+        mapper.insertOrUpdate(Person().apply {
+            id = 1
+            name = "efg"
+        })
+        mapper.queryCount{ NAME.eq("aba")} shouldBe 1
+    }
 }

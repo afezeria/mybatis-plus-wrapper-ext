@@ -80,6 +80,12 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers
         wrapper.$name(true, name, value)
     }
 
+    fun <T> FieldDef<T, *>.${name}IfNotNull(value: T?) {
+        if (value != null) {
+            wrapper.$name(true, name, value)
+        }
+    }
+
     fun <T> FieldDef<T, *>.$name(condition: Boolean, valueFn: () -> T) {
         if (condition) {
             wrapper.$name(true, name, valueFn())
@@ -324,7 +330,7 @@ class FinalWhereScope<S : WhereScope<S, TD, T>, TD, T>(
         return whereScope.mapper.selectList(getQueryWrapper())
     }
 
-    fun toOne(): T {
+    fun toOne(): T? {
         return whereScope.mapper.selectOne(getQueryWrapper())
     }
 

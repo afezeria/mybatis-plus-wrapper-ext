@@ -38,6 +38,12 @@ class ConditionFunctionTests {
         mapper.queryList {
             ID.eq(false) { 1 }
         }.size shouldBe 3
+        mapper.queryList {
+            ID.eqIfNotNull(1)
+        }.size shouldBe 1
+        mapper.queryList {
+            ID.eqIfNotNull(null)
+        }.size shouldBe 3
     }
 
     @Test
@@ -50,6 +56,12 @@ class ConditionFunctionTests {
         }.size shouldBe 2
         mapper.queryList {
             ID.ge(false) { 2 }
+        }.size shouldBe 3
+        mapper.queryList {
+            ID.geIfNotNull(2)
+        }.size shouldBe 2
+        mapper.queryList {
+            ID.geIfNotNull(null)
         }.size shouldBe 3
     }
 
