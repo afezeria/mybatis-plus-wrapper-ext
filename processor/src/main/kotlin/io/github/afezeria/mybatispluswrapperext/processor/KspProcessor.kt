@@ -697,6 +697,33 @@ class KspProcessor(val environment: SymbolProcessorEnvironment) : SymbolProcesso
                         )
                         .build()
                 )
+                /**
+                 * public fun PersonMapper.insertOrUpdate(entity: Person): Int {
+                 *     return if (entity.id != null) {
+                 *         updateById(entity)
+                 *     } else {
+                 *         insert(entity)
+                 *     }
+                 * }
+                 *
+                 */
+                fileSpecBuilder.addFunction(
+                    FunSpec.builder("insertOrUpdate")
+                        .receiver(mapperClassName)
+                        .returns(INT_CLASS_NAME)
+                        .addParameter("entity", entityClassName)
+                        .addCode(
+                            """
+                            return if (entity.%N != null) {
+                                updateById(entity)
+                            } else {
+                                insert(entity)
+                            }
+                        """.trimIndent(),
+                            idSimpleName,
+                        )
+                        .build()
+                )
             }
     }
 
