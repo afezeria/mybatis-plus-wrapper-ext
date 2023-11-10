@@ -240,6 +240,10 @@ $nestedOperators
         expressions.add(fn)
         return FinalWhereScope(self)
     }
+
+    companion object {
+        var ALLOW_UNSAFE_DELETE_AND_UPDATE = false
+    }
 }
     """.trimIndent()
         return whereScopeCode
@@ -384,6 +388,12 @@ $existsMethodBody
     }
 
     fun toDelete(): Int {
+        val wrapper = getQueryWrapper()
+        if (!WhereScope.ALLOW_UNSAFE_DELETE_AND_UPDATE
+            && !wrapper.customSqlSegment.startsWith("where", ignoreCase = true)
+        ) {
+            throw IllegalArgumentException("delete statement without 'where'")
+        }
         return whereScope.mapper.delete(getQueryWrapper())
     }
 
@@ -401,6 +411,11 @@ $existsMethodBody
         whereScope.wrapper = w
         whereScope.expressions.forEach {
             it.invoke(whereScope.self)
+        }
+        if (!WhereScope.ALLOW_UNSAFE_DELETE_AND_UPDATE
+            && !w.customSqlSegment.startsWith("where", ignoreCase = true)
+        ) {
+            throw IllegalArgumentException("update statement without 'where'")
         }
         return w
     }

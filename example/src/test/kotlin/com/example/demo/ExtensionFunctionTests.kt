@@ -1,6 +1,7 @@
 package com.example.demo
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.shouldBe
 import org.junit.jupiter.api.Test
@@ -73,6 +74,9 @@ class ExtensionFunctionTests {
             ID.eq(2)
         }
         mapper.queryCount { ID.eq(2) } shouldBe 0
+        shouldThrow<IllegalArgumentException> {
+            mapper.delete {}
+        }
     }
 
     @Test
@@ -90,19 +94,25 @@ class ExtensionFunctionTests {
             NAME.set("bcd")
         }
         mapper.queryOne { ID.eq(3) }!!.name shouldBe "bcd"
+        shouldThrow<IllegalArgumentException> {
+            mapper.where { }
+                .update {
+                    NAME.set("abc")
+                }
+        }
     }
 
     @Test
     fun insertOrUpdate() {
-        mapper.queryCount{ NAME.eq("aba")} shouldBe 1
+        mapper.queryCount { NAME.eq("aba") } shouldBe 1
         mapper.insertOrUpdate(Person().apply {
             name = "aba"
         })
-        mapper.queryCount{ NAME.eq("aba")} shouldBe 2
+        mapper.queryCount { NAME.eq("aba") } shouldBe 2
         mapper.insertOrUpdate(Person().apply {
             id = 1
             name = "efg"
         })
-        mapper.queryCount{ NAME.eq("aba")} shouldBe 1
+        mapper.queryCount { NAME.eq("aba") } shouldBe 1
     }
 }
