@@ -1,5 +1,6 @@
 package com.example.demo
 
+import io.kotest.matchers.collections.shouldContainInOrder
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import org.junit.jupiter.api.Test
@@ -366,7 +367,16 @@ class ConditionFunctionTests {
             name shouldBe "aba"
             age shouldBe null
         }
+    }
 
+    @Test
+    fun orderByDesc() {
+        val list = mapper.queryList { }.map { it.id }
+        mapper.queryList { orderByAsc(ID) }.map { it.id } shouldContainInOrder list
+        mapper.where { orderByAsc(false, ID) }.getQueryWrapper().customSqlSegment.trim() shouldBe ""
+        mapper.queryList { orderByDesc(ID) }.map { it.id } shouldContainInOrder list.reversed()
+        mapper.queryList { orderByDesc(true, ID) }.map { it.id } shouldContainInOrder list.reversed()
+        mapper.queryList { orderByDesc(false, ID) }.map { it.id } shouldContainInOrder list
     }
 }
 //between, eq, ge, gt, in, isNotNull, isNull, le, like, likeLeft, likeRight, lt, ne, notBetween, notIn,notLike, notLikeLeft, notLikeRight, and, or

@@ -235,6 +235,23 @@ $nestedOperators
     fun <T> FieldDef<T, *>.notIn(condition: Boolean, vararg value: T?) {
         wrapper.notIn(condition, name, *value)
     }
+    
+    fun orderByAsc(condition: Boolean, vararg columns: FieldDef<*, *>) {
+        wrapper.orderByAsc(condition, columns.map { it.name })
+    }
+
+    fun orderByAsc(vararg columns: FieldDef<*, *>) {
+        wrapper.orderByAsc(columns.map { it.name })
+    }
+
+    fun orderByDesc(condition: Boolean, vararg columns: FieldDef<*, *>) {
+        wrapper.orderByDesc(condition, columns.map { it.name })
+    }
+
+    fun orderByDesc(vararg columns: FieldDef<*, *>) {
+        wrapper.orderByDesc(columns.map { it.name })
+    }
+
 
     operator fun invoke(fn: S.() -> Unit): FinalWhereScope<S, TD, T> {
         expressions.add(fn)
