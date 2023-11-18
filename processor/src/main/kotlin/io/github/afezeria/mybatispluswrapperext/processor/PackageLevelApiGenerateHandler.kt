@@ -153,6 +153,36 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers
     }
 """
             }.joinToString(separator = "")
+        val funcClassDeclaration =
+            globalResolver.getClassDeclarationByName("com.baomidou.mybatisplus.core.conditions.interfaces.Func")!!
+        val listDeclaration = globalResolver.getClassDeclarationByName("kotlin.collections.MutableList")!!
+        val funcOperators = funcClassDeclaration.getDeclaredFunctions().find {
+            it.simpleName.asString() == "orderBy"
+                    && it.parameters.size == 3
+                    && it.parameters.first().type.resolve().declaration == booleanDeclaration
+                    && it.parameters[1].type.resolve().declaration == booleanDeclaration
+                    && it.parameters[1].name?.asString() == "isAsc"
+                    && it.parameters[2].type.resolve().declaration == listDeclaration
+        }?.let {
+            """
+    fun orderByAsc(condition: Boolean, vararg columns: FieldDef<*, *>) {
+        wrapper.orderBy(condition, true, columns.map { it.name })
+    }
+
+    fun orderByAsc(vararg columns: FieldDef<*, *>) {
+        wrapper.orderBy(true, true, columns.map { it.name })
+    }
+
+    fun orderByDesc(condition: Boolean, vararg columns: FieldDef<*, *>) {
+        wrapper.orderBy(condition, false, columns.map { it.name })
+    }
+
+    fun orderByDesc(vararg columns: FieldDef<*, *>) {
+        wrapper.orderBy(true, false, columns.map { it.name })
+    }
+"""
+
+        } ?: ""
 
 
         @Language("kotlin")
@@ -236,22 +266,7 @@ $nestedOperators
         wrapper.notIn(condition, name, *value)
     }
     
-    fun orderByAsc(condition: Boolean, vararg columns: FieldDef<*, *>) {
-        wrapper.orderByAsc(condition, columns.map { it.name })
-    }
-
-    fun orderByAsc(vararg columns: FieldDef<*, *>) {
-        wrapper.orderByAsc(columns.map { it.name })
-    }
-
-    fun orderByDesc(condition: Boolean, vararg columns: FieldDef<*, *>) {
-        wrapper.orderByDesc(condition, columns.map { it.name })
-    }
-
-    fun orderByDesc(vararg columns: FieldDef<*, *>) {
-        wrapper.orderByDesc(columns.map { it.name })
-    }
-
+$funcOperators
 
     operator fun invoke(fn: S.() -> Unit): FinalWhereScope<S, TD, T> {
         expressions.add(fn)
