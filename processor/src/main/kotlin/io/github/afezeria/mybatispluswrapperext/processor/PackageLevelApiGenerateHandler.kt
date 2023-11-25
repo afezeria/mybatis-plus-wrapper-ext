@@ -155,30 +155,38 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers
             }.joinToString(separator = "")
         val funcClassDeclaration =
             globalResolver.getClassDeclarationByName("com.baomidou.mybatisplus.core.conditions.interfaces.Func")!!
+        val funcTypeVarParam = funcClassDeclaration.typeParameters.last()
         val listDeclaration = globalResolver.getClassDeclarationByName("kotlin.collections.MutableList")!!
+
         val funcOperators = funcClassDeclaration.getDeclaredFunctions().find {
             it.simpleName.asString() == "orderBy"
                     && it.parameters.size == 3
                     && it.parameters.first().type.resolve().declaration == booleanDeclaration
                     && it.parameters[1].type.resolve().declaration == booleanDeclaration
                     && it.parameters[1].name?.asString() == "isAsc"
-                    && it.parameters[2].type.resolve().declaration == listDeclaration
+                    && (it.parameters[2].type.resolve().declaration == listDeclaration
+                    || (it.parameters[2].isVararg && it.parameters[2].type.resolve().declaration == funcTypeVarParam))
         }?.let {
+            val columns = if (it.parameters[2].isVararg) {
+                "*columns.map { it.name }.toTypedArray()"
+            } else {
+               "columns.map { it.name }"
+            }
             """
     fun orderByAsc(condition: Boolean, vararg columns: FieldDef<*, *>) {
-        wrapper.orderBy(condition, true, columns.map { it.name })
+        wrapper.orderBy(condition, true, $columns)
     }
 
     fun orderByAsc(vararg columns: FieldDef<*, *>) {
-        wrapper.orderBy(true, true, columns.map { it.name })
+        wrapper.orderBy(true, true, $columns)
     }
 
     fun orderByDesc(condition: Boolean, vararg columns: FieldDef<*, *>) {
-        wrapper.orderBy(condition, false, columns.map { it.name })
+        wrapper.orderBy(condition, false, $columns)
     }
 
     fun orderByDesc(vararg columns: FieldDef<*, *>) {
-        wrapper.orderBy(true, false, columns.map { it.name })
+        wrapper.orderBy(true, false, $columns)
     }
 """
 
