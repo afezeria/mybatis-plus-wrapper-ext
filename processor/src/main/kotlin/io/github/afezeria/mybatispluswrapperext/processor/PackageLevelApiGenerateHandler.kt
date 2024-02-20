@@ -315,6 +315,10 @@ abstract class UpdateScope<S : UpdateScope<S, TD, T>, TD, T>(
         wrapper.set(name, value)
     }
 
+    fun <T> FieldDef<T, *>.setNullable(value: T?) {
+        wrapper.set(name, value)
+    }
+
     fun <T> FieldDef<T, *>.setNull() {
         wrapper.set(name, null)
     }

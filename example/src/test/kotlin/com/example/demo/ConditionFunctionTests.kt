@@ -341,6 +341,25 @@ class ConditionFunctionTests {
     }
 
     @Test
+    fun setNullable() {
+        mapper.selectById(1).apply {
+            name shouldBe "aba"
+        }
+        mapper.updateById(1) {
+            NAME.setNullable("abc")
+        }
+        mapper.selectById(1).apply {
+            name shouldBe "abc"
+        }
+        mapper.updateById(1) {
+            NAME.setNullable(null)
+        }
+        mapper.selectById(1).apply {
+            name shouldBe null
+        }
+    }
+
+    @Test
     fun setNull() {
         mapper.selectById(1).apply {
             name shouldBe "aba"
